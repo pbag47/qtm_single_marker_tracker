@@ -1,0 +1,1 @@
+Crazyflie name,QTM packet timestamp (s),QTM_x (m),QTM_y (m),QTM_z (m),cf_yaw (°),QTM_vx (m/s),QTM_vy (m/s),QTM_vz (m/s),x_g (m),y_g (m),z_g (m),yaw_g (°),PID_zp,PID_zd,PID_zi,roll_c (°),pitch_c (°),yaw_c (°),thrust_c (PWM)
