@@ -13,7 +13,7 @@ class SwarmObject:
         self.distance_to_waypoint_threshold: float = 0.05
 
         # Obstacle detection distance (m)
-        self.xy_auto_avoid_d0: float = 0.75
+        self.xy_auto_avoid_d0: float = 0.50  # 0.75
 
         # ---- Attributes initialization ---- #
         self.manual_x: float = 0.0

@@ -91,36 +91,75 @@ if __name__ == '__main__':
     # -- Flight parameters ------------------------------------------------------- #
     qtm_ip_address: str = '192.168.0.1'
 
-    all_agents = [swarm_object_class.Agent('cf1', 'radio://0/83/2M/E7E7E7E701'),
-                  swarm_object_class.Agent('cf2', 'radio://1/85/2M/E7E7E7E702'),
-                  swarm_object_class.Agent('cf3', 'radio://1/90/2M/E7E7E7E703'),
-                  swarm_object_class.Agent('cf4', 'radio://0/90/2M/E7E7E7E704')]
+    all_agents = [swarm_object_class.Agent('cf1', 'radio://0/81/2M/E7E7E7E701'),
+                  swarm_object_class.Agent('cf2', 'radio://0/82/2M/E7E7E7E702'),
+                  swarm_object_class.Agent('cf3', 'radio://1/83/2M/E7E7E7E703'),
+                  swarm_object_class.Agent('cf4', 'radio://1/84/2M/E7E7E7E704'),
+                  swarm_object_class.Agent('cf5', 'radio://2/85/2M/E7E7E7E705'),
+                  swarm_object_class.Agent('cf6', 'radio://2/86/2M/E7E7E7E706'),
+                  swarm_object_class.Agent('cf7', 'radio://3/87/2M/E7E7E7E707'),
+                  swarm_object_class.Agent('cf8', 'radio://3/88/2M/E7E7E7E708'),
+                  swarm_object_class.Agent('cf9', 'radio://4/89/2M/E7E7E7E709'),
+                  swarm_object_class.Agent('cf10', 'radio://4/90/2M/E7E7E7E710')]
 
-    all_agents[0].set_initial_position([0.5, 0.5, 0.0])
-    all_agents[0].set_takeoff_height(0.4)
+    all_agents[0].set_initial_position([1.5, 0.0, 0.0])
+    all_agents[0].set_takeoff_height(0.50)
     all_agents[0].set_z_consensus_connectivity(['cf2', 'cf3', 'cf4'])  # ['cf2', 'cf3', 'cf4']
-    all_agents[0].set_agents_to_avoid(['cf2', 'cf3', 'cf4'])
+    all_agents[0].set_agents_to_avoid(['cf2', 'cf3', 'cf4', 'cf5', 'cf6', 'cf7', 'cf8', 'cf9', 'cf10'])
 
-    all_agents[1].set_initial_position([0.5, -0.5, 0.0])
-    all_agents[1].set_takeoff_height(0.60)
+    all_agents[1].set_initial_position([1.0, 1.0, 0.0])
+    all_agents[1].set_takeoff_height(0.55)
     all_agents[1].set_z_consensus_connectivity(['cf1', 'cf3', 'cf4'])  # ['cf1', 'cf3', 'cf4']
-    all_agents[1].set_agents_to_avoid(['cf1', 'cf3', 'cf4'])
+    all_agents[1].set_agents_to_avoid(['cf1', 'cf3', 'cf4', 'cf5', 'cf6', 'cf7', 'cf8', 'cf9', 'cf10'])
 
-    all_agents[2].set_initial_position([-0.5, 0.5, 0.0])
-    all_agents[2].set_takeoff_height(0.70)
+    all_agents[2].set_initial_position([1.0, -1.0, 0.0])
+    all_agents[2].set_takeoff_height(0.55)
     all_agents[2].set_z_consensus_connectivity(['cf1', 'cf2', 'cf4'])  # ['cf1', 'cf2', 'cf4']
-    all_agents[2].set_agents_to_avoid(['cf1', 'cf2', 'cf4'])
+    all_agents[2].set_agents_to_avoid(['cf1', 'cf2', 'cf4', 'cf5', 'cf6', 'cf7', 'cf8', 'cf9', 'cf10'])
 
-    all_agents[3].set_initial_position([-0.5, -0.5, 0.0])
-    all_agents[3].set_takeoff_height(0.80)
+    all_agents[3].set_initial_position([0.6, 0.0, 0.0])
+    all_agents[3].set_takeoff_height(0.60)
     all_agents[3].set_z_consensus_connectivity(['cf1', 'cf2', 'cf3'])  # ['cf1', 'cf2', 'cf3']
-    all_agents[3].set_agents_to_avoid(['cf1', 'cf2', 'cf3'])
+    all_agents[3].set_agents_to_avoid(['cf1', 'cf2', 'cf3', 'cf5', 'cf6', 'cf7', 'cf8', 'cf9', 'cf10'])
+
+    all_agents[4].set_initial_position([0.0, 1.0, 0.0])
+    all_agents[4].set_takeoff_height(0.65)
+    all_agents[4].set_z_consensus_connectivity(['cf1', 'cf2', 'cf3'])  # ['cf1', 'cf2', 'cf3']
+    all_agents[4].set_agents_to_avoid(['cf1', 'cf2', 'cf3', 'cf4', 'cf6', 'cf7', 'cf8', 'cf9', 'cf10'])
+
+    all_agents[5].set_initial_position([0.0, -1.0, 0.0])
+    all_agents[5].set_takeoff_height(0.65)
+    all_agents[5].set_z_consensus_connectivity(['cf1', 'cf2', 'cf3'])  # ['cf1', 'cf2', 'cf3']
+    all_agents[5].set_agents_to_avoid(['cf1', 'cf2', 'cf3', 'cf4', 'cf5', 'cf7', 'cf8', 'cf9', 'cf10'])
+
+    all_agents[6].set_initial_position([-0.4, 0.0, 0.0])
+    all_agents[6].set_takeoff_height(0.60)
+    all_agents[6].set_z_consensus_connectivity(['cf1', 'cf2', 'cf3'])  # ['cf1', 'cf2', 'cf3']
+    all_agents[6].set_agents_to_avoid(['cf1', 'cf2', 'cf3', 'cf4', 'cf5', 'cf6', 'cf8', 'cf9', 'cf10'])
+
+    all_agents[7].set_initial_position([-1.0, 1.0, 0.0])
+    all_agents[7].set_takeoff_height(0.55)
+    all_agents[7].set_z_consensus_connectivity(['cf1', 'cf2', 'cf3'])  # ['cf1', 'cf2', 'cf3']
+    all_agents[7].set_agents_to_avoid(['cf1', 'cf2', 'cf3', 'cf4', 'cf5', 'cf6', 'cf7', 'cf9', 'cf10'])
+
+    all_agents[8].set_initial_position([-1.0, -1.0, 0.0])
+    all_agents[8].set_takeoff_height(0.55)
+    all_agents[8].set_z_consensus_connectivity(['cf1', 'cf2', 'cf3'])  # ['cf1', 'cf2', 'cf3']
+    all_agents[8].set_agents_to_avoid(['cf1', 'cf2', 'cf3', 'cf4', 'cf5', 'cf6', 'cf7', 'cf8', 'cf10'])
+
+    all_agents[9].set_initial_position([-1.25, 0.0, 0.0])
+    all_agents[9].set_takeoff_height(0.50)
+    all_agents[9].set_z_consensus_connectivity(['cf1', 'cf2', 'cf3'])  # ['cf1', 'cf2', 'cf3']
+    all_agents[9].set_agents_to_avoid(['cf1', 'cf2', 'cf3', 'cf4', 'cf5', 'cf6', 'cf7', 'cf8', 'cf9'])
 
     # agents = []
     # agents = [all_agents[0]]
     # agents = [all_agents[0], all_agents[1]]
-    # agents = [all_agents[3], all_agents[1], all_agents[2]]
-    agents = [all_agents[0], all_agents[1], all_agents[2], all_agents[3]]
+    # agents = [all_agents[0], all_agents[1], all_agents[2]]
+    # agents = [all_agents[0], all_agents[1], all_agents[2], all_agents[3], all_agents[4]]
+    agents = [all_agents[1], all_agents[2], all_agents[3], all_agents[4], all_agents[5],
+              all_agents[6]]
+    # agents = all_agents
 
     air_bases = []
     # air_bases = [SquareAirBase()]

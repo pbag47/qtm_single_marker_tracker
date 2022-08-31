@@ -277,7 +277,13 @@ if __name__ == '__main__':
     cf_colors = {'cf1': 'white',
                  'cf2': 'cyan',
                  'cf3': 'yellow',
-                 'cf4': 'magenta'}
+                 'cf4': 'magenta',
+                 'cf5': 'blue',
+                 'cf6': 'red',
+                 'cf7': 'green',
+                 'cf8': 'pink',
+                 'cf9': 'brown',
+                 'cf10': 'orange'}
 
     logs_data = extract_csv_data('logs.csv')
     figure = make_subplots(rows=4, cols=4,
