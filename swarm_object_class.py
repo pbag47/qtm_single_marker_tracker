@@ -1,8 +1,6 @@
-import math
 import numpy as np
 
 from agent_class import Agent
-from air_base_class import SquareAirBase
 from typing import List, Union
 
 
@@ -13,7 +11,7 @@ class SwarmObject:
         self.distance_to_waypoint_threshold: float = 0.05
 
         # Obstacle detection distance (m)
-        self.xy_auto_avoid_d0: float = 0.50  # 0.75
+        self.xy_auto_avoid_d0: float = 0.75  # 0.75
 
         # ---- Attributes initialization ---- #
         self.manual_x: float = 0.0
@@ -27,10 +25,6 @@ class SwarmObject:
         self.swarm_agent_list: List[Agent] = []
         self.agent_name_list: List[str] = []
         self.waypoint_number: Union[None, int] = None
-
-        self.air_base_list: List[SquareAirBase] = []
-
-        self.flightmode = 'position'  # Choose between 'position', 'velocity', and 'attitude' flight mode
 
     def add_agent(self, agent: Agent):
         self.swarm_agent_list.append(agent)
@@ -64,40 +58,32 @@ class SwarmObject:
                     if agent.state == 'Back_to_init':
                         self.back_to_initial_position_ctl_law(agent)
 
-                    if agent.state == 'Land_on_air_base':
-                        self.land_on_air_base(agent)
-
-                    if agent.state == 'Sleep_on_air_base':
-                        self.sleep_on_air_base(agent)
-
-                    if agent.state == 'Takeoff_from_air_base':
-                        self.takeoff_from_air_base(agent)
+                    agent.log_flight_data()
                 else:
                     agent.cf.commander.send_stop_setpoint()
-        else:
-            if all([(agent.battery_test_passed and agent.extpos_test_passed) for agent in self.swarm_agent_list]):
-                self.ready_to_fly = True
-                print('Crazyflie connection recap :')
-                for agent in self.swarm_agent_list:
-                    agent.setup_finished = True
-                    print('    -', agent.name, ':')
-                    if agent.extpos.x >= 0:
-                        print('        x = ', round(agent.extpos.x, 3), 'm')
-                    else:
-                        print('        x =', round(agent.extpos.x, 3), 'm')
-                    if agent.extpos.y >= 0:
-                        print('        y = ', round(agent.extpos.y, 3), 'm')
-                    else:
-                        print('        y =', round(agent.extpos.y, 3), 'm')
-                    if agent.extpos.z >= 0:
-                        print('        z = ', round(agent.extpos.z, 3), 'm')
-                    else:
-                        print('        z =', round(agent.extpos.z, 3), 'm')
-                    print('        Battery level =', round(agent.initial_battery_level), '%')
-                    if agent.enabled:
-                        print('        Flight enabled')
-                    else:
-                        print('        -- Warning -- : Flight disabled')
+        elif all([(agent.battery_test_passed and agent.extpos_test_passed) for agent in self.swarm_agent_list]):
+            self.ready_to_fly = True
+            print('Crazyflie connection recap :')
+            for agent in self.swarm_agent_list:
+                agent.setup_finished = True
+                print('    -', agent.name, ':')
+                if agent.extpos.x >= 0:
+                    print('        x = ', round(agent.extpos.x, 3), 'm')
+                else:
+                    print('        x =', round(agent.extpos.x, 3), 'm')
+                if agent.extpos.y >= 0:
+                    print('        y = ', round(agent.extpos.y, 3), 'm')
+                else:
+                    print('        y =', round(agent.extpos.y, 3), 'm')
+                if agent.extpos.z >= 0:
+                    print('        z = ', round(agent.extpos.z, 3), 'm')
+                else:
+                    print('        z =', round(agent.extpos.z, 3), 'm')
+                print('        Battery level =', round(agent.initial_battery_level), '%')
+                if agent.enabled:
+                    print('        Flight enabled')
+                else:
+                    print('        -- Warning -- : Flight disabled')
 
     def manual_control_law(self, agent: Agent):
         kp = 0.50
@@ -121,20 +107,12 @@ class SwarmObject:
         agent.standby_position[2] = self.manual_z
         agent.standby_yaw = self.manual_yaw
 
-        if self.flightmode == 'position':
-            agent.cf.commander.send_position_setpoint(agent.standby_position[0], agent.standby_position[1],
-                                                      agent.standby_position[2], agent.standby_yaw)
-        elif self.flightmode == 'attitude':
-            roll, pitch, yaw, thrust = agent.attitude_control_law(agent.standby_position, agent.standby_yaw)
-            agent.cf.commander.send_setpoint(roll, pitch, yaw, thrust)
+        agent.cf.commander.send_position_setpoint(agent.standby_position[0], agent.standby_position[1],
+                                                  agent.standby_position[2], agent.standby_yaw)
 
     def takeoff_control_law(self, agent: Agent):
-        if self.flightmode == 'position':
-            agent.cf.commander.send_position_setpoint(agent.takeoff_position[0], agent.takeoff_position[1],
-                                                      agent.takeoff_position[2], agent.takeoff_yaw)
-        elif self.flightmode == 'attitude':
-            roll, pitch, yaw, thrust = agent.attitude_control_law(agent.takeoff_position, 0)
-            agent.cf.commander.send_setpoint(roll, pitch, yaw, thrust)
+        agent.cf.commander.send_position_setpoint(agent.takeoff_position[0], agent.takeoff_position[1],
+                                                  agent.takeoff_position[2], agent.takeoff_yaw)
 
         d = distance([agent.extpos.x, agent.extpos.y,
                       agent.extpos.z], agent.takeoff_position)
@@ -145,12 +123,8 @@ class SwarmObject:
             agent.standby_position[2] = agent.takeoff_height
 
     def landing_control_law(self, agent: Agent):
-        if self.flightmode == 'position':
-            agent.cf.commander.send_position_setpoint(agent.land_position[0], agent.land_position[1],
-                                                      agent.land_position[2], agent.land_yaw)
-        elif self.flightmode == 'attitude':
-            roll, pitch, yaw, thrust = agent.attitude_control_law(agent.land_position, agent.land_yaw)
-            agent.cf.commander.send_setpoint(roll, pitch, yaw, thrust)
+        agent.cf.commander.send_position_setpoint(agent.land_position[0], agent.land_position[1],
+                                                  agent.land_position[2], agent.land_yaw)
 
         d = vertical_distance(agent.extpos.z, agent.land_position[2])
         if d <= self.distance_to_waypoint_threshold:
@@ -168,19 +142,14 @@ class SwarmObject:
         agent.cf.commander.send_velocity_world_setpoint(x_velocity, y_velocity, z_velocity, 0)
 
     def standby_control_law(self, agent: Agent):
-        if self.flightmode == 'position' or self.flightmode == 'velocity':
-            agents_to_avoid = [agt for agt in self.swarm_agent_list if agt.name in agent.xy_auto_avoid_agents_list]
-            objective = [agent.standby_position[0], agent.standby_position[1]]
-            omega = np.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
-                                                     [agent.x_boundaries[1], agent.y_boundaries[1]]))
-            vx, vy = get_auto_avoid_velocity_command(agent, agent.x_boundaries, agent.y_boundaries, agents_to_avoid,
-                                                     objective, omega, self.xy_auto_avoid_d0)
-            vz = agent.standby_position[2] - agent.extpos.z
-            agent.cf.commander.send_velocity_world_setpoint(vx, vy, vz, 0)
-
-        elif self.flightmode == 'attitude':
-            roll, pitch, yaw, thrust = agent.attitude_control_law(agent.standby_position, agent.standby_yaw)
-            agent.cf.commander.send_setpoint(roll, pitch, yaw, thrust)
+        agents_to_avoid = [agt for agt in self.swarm_agent_list if agt.name in agent.xy_auto_avoid_agents_list]
+        objective = [agent.standby_position[0], agent.standby_position[1]]
+        omega = np.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
+                                                 [agent.x_boundaries[1], agent.y_boundaries[1]]))
+        vx, vy = get_auto_avoid_velocity_command(agent, agent.x_boundaries, agent.y_boundaries, agents_to_avoid,
+                                                 objective, omega, self.xy_auto_avoid_d0)
+        vz = agent.standby_position[2] - agent.extpos.z
+        agent.cf.commander.send_velocity_world_setpoint(vx, vy, vz, 0)
 
     def wingman_control_law(self, agent):
         agents_to_avoid = [agt for agt in self.swarm_agent_list if agt.name in agent.xy_auto_avoid_agents_list]
@@ -202,113 +171,6 @@ class SwarmObject:
                                                  objective, omega, self.xy_auto_avoid_d0)
         vz = agent.takeoff_height - agent.extpos.z
         agent.cf.commander.send_velocity_world_setpoint(vx, vy, vz, 0)
-
-    def land_on_air_base(self, agent):
-        uav_handled = False
-        position_to_reach = None
-        for ab in self.air_base_list:
-            if ab.handled_uav == agent:
-                uav_handled, position_to_reach = ab.handle_uav(agent, 'Land')
-
-        if not uav_handled:
-            for ab in self.air_base_list:
-                if ab.available:
-                    uav_handled, position_to_reach = ab.handle_uav(agent, 'Land')
-                    if uav_handled and position_to_reach is not None:
-                        break
-
-        if uav_handled and position_to_reach is not None:
-            agents_to_avoid = [agt for agt in self.swarm_agent_list if (agt.name in agent.xy_auto_avoid_agents_list
-                                                                        and not agt.is_flying)]
-            if agent.name == 'cf2':
-                print([agt.name for agt in agents_to_avoid])
-            objective = [position_to_reach[0], position_to_reach[1]]
-            omega = np.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
-                                                     [agent.x_boundaries[1], agent.y_boundaries[1]]))
-            vx, vy = get_auto_avoid_velocity_command(agent, agent.x_boundaries, agent.y_boundaries,
-                                                     agents_to_avoid,
-                                                     objective, omega, self.xy_auto_avoid_d0)
-            vz = position_to_reach[2] - agent.extpos.z
-
-            yaw_rate = agent.yaw - position_to_reach[3]
-
-            agent.cf.commander.send_velocity_world_setpoint(vx, vy, vz, yaw_rate)
-        else:
-            agents_to_avoid = [agt for agt in self.swarm_agent_list if agt.name in agent.xy_auto_avoid_agents_list]
-            objective = [agent.standby_position[0], agent.standby_position[1]]
-            omega = np.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
-                                                     [agent.x_boundaries[1], agent.y_boundaries[1]]))
-            vx, vy = get_auto_avoid_velocity_command(agent, agent.x_boundaries, agent.y_boundaries, agents_to_avoid,
-                                                     objective, omega, self.xy_auto_avoid_d0)
-            vz = agent.standby_position[2] - agent.extpos.z
-            agent.cf.commander.send_velocity_world_setpoint(vx, vy, vz, 0)
-
-    def sleep_on_air_base(self, agent: Agent):
-        uav_found = False
-        for ab in self.air_base_list:
-            for slot in ab.slots:
-                if slot.uav_parked == agent:
-                    uav_found = True
-                    phi = 0.0
-                    theta = 0.0
-                    psi = ab.yaw * np.pi / 180
-
-                    qw = math.cos(phi) * math.cos(theta / 2) * math.cos(psi / 2) \
-                         - math.sin(phi / 2) * math.sin(theta / 2) * math.sin(psi / 2)
-                    qx = math.sin(phi / 2) * math.cos(theta / 2) * math.cos(psi / 2) \
-                         + math.cos(phi / 2) * math.sin(theta / 2) * math.sin(psi / 2)
-                    qy = math.sin(phi / 2) * math.cos(theta / 2) * math.sin(psi / 2) \
-                         - math.cos(phi / 2) * math.sin(theta / 2) * math.cos(psi / 2)
-                    qz = math.cos(phi / 2) * math.cos(theta / 2) * math.sin(psi / 2) \
-                         + math.sin(phi / 2) * math.sin(theta / 2) * math.cos(psi / 2)
-
-                    qn = math.sqrt((qw**2) + (qx**2) + (qy**2) + (qz**2))
-                    qw = qw / qn
-                    qx = qx / qn
-                    qy = qy / qn
-                    qz = qz / qn
-
-                    agent.csv_logger.writerow([agent.name, agent.timestamp,
-                                               agent.extpos.x, agent.extpos.y, agent.extpos.z, agent.yaw,
-                                               agent.velocity[0], agent.velocity[1], agent.velocity[2],
-                                               agent.extpos.x, agent.extpos.y, agent.extpos.z,
-                                               ab.yaw,
-                                               0, 0, 0,
-                                               0, 0, 0, 0])
-
-                    agent.cf.extpos.send_extpose(agent.extpos.x, agent.extpos.y, agent.extpos.z, qx, qy, qz, qw)
-        if not uav_found:
-            print(' -- Warning -- :', agent.name, 'not found on any declared Air Base')
-            agent.stop()
-
-    def takeoff_from_air_base(self, agent):
-        uav_found = False
-        for ab in self.air_base_list:
-            for slot in ab.slots:
-                if slot.uav_parked == agent:
-                    uav_found = True
-                    uav_handled, position_to_reach = ab.handle_uav(agent, 'Takeoff')
-                    if uav_handled and position_to_reach is not None:
-                        agents_to_avoid = [agt for agt in self.swarm_agent_list if
-                                           agt.name in agent.xy_auto_avoid_agents_list and not agt.is_flying]
-                        objective = [position_to_reach[0], position_to_reach[1]]
-                        omega = np.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
-                                                                 [agent.x_boundaries[1], agent.y_boundaries[1]]))
-                        vx, vy = get_auto_avoid_velocity_command(agent, agent.x_boundaries, agent.y_boundaries,
-                                                                 agents_to_avoid,
-                                                                 objective, omega, self.xy_auto_avoid_d0)
-                        vz = position_to_reach[2] - agent.extpos.z
-                        yaw_rate = agent.yaw - position_to_reach[3]
-                        # yaw_rate = position_to_reach[3] - agent.yaw
-                        agent.cf.commander.send_velocity_world_setpoint(vx, vy, vz, yaw_rate)
-                        break
-                    else:
-                        agent.cf.commander.send_stop_setpoint()
-
-        if not uav_found:
-            print(' -- Warning -- :', agent.name, 'not found on any of the declared Air Bases')
-            print('                 -> takeoff command access denied, switching back to Not flying mode')
-            agent.stop()
 
 
 def get_auto_avoid_velocity_command(agent: Agent, x_limits: [float] * 2, y_limits: [float] * 2,

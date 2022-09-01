@@ -97,8 +97,6 @@ def plot_attitude_vs_time(data, colors_association, fig):
 
         qtm_xn = []
         qtm_yn = []
-        xn_g = []
-        yn_g = []
         for j in range(len(data[cf_name]['QTM packet timestamp (s)'])):
             qtm_xn.append(data[cf_name]['QTM_x (m)'][j] * np.cos(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180)
                           + data[cf_name]['QTM_y (m)'][j] * np.sin(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180))
@@ -106,20 +104,6 @@ def plot_attitude_vs_time(data, colors_association, fig):
             qtm_yn.append(- data[cf_name]['QTM_x (m)'][j] * np.sin(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180)
                           + data[cf_name]['QTM_y (m)'][j] * np.cos(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180))
 
-            xn_g.append(data[cf_name]['x_g (m)'][j] * np.cos(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180)
-                          + data[cf_name]['y_g (m)'][j] * np.sin(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180))
-
-            yn_g.append(- data[cf_name]['x_g (m)'][j] * np.sin(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180)
-                          + data[cf_name]['y_g (m)'][j] * np.cos(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180))
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['z_g (m)'],
-                                 line=dict(color=color, dash='dash'),
-                                 name=cf_name + ' targeted state',
-                                 legendgroup=str(i),
-                                 mode='lines',
-                                 ),
-                      row=1, col=4)
         fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
                                  y=data[cf_name]['QTM_z (m)'],
                                  line=dict(color=color),
@@ -143,54 +127,8 @@ def plot_attitude_vs_time(data, colors_association, fig):
         fig.update_yaxes(title='VZ (m/s)', row=2, col=4)
 
         fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['PID_zp'],
-                                 line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=3, col=4)
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['PID_zi'],
-                                 line=dict(color=color, dash='dot'),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=3, col=4)
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['PID_zd'],
-                                 line=dict(color=color, dash='dash'),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=3, col=4)
-        fig.update_xaxes(title='Time (s)', row=3, col=4)
-        fig.update_yaxes(title='Thrust (PWM)', row=3, col=4)
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['thrust_c (PWM)'],
-                                 line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=4, col=4)
-        fig.update_xaxes(title='Time (s)', row=4, col=4)
-        fig.update_yaxes(title='Thrust command (PWM)', row=4, col=4, range=[0, 66000])
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
                                  y=qtm_xn,
                                  line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=3, col=1)
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=xn_g,
-                                 line=dict(color=color, dash='dash'),
                                  legendgroup=str(i),
                                  showlegend=False,
                                  mode='lines',
@@ -200,27 +138,8 @@ def plot_attitude_vs_time(data, colors_association, fig):
         fig.update_yaxes(title='Xn (m)', row=3, col=1)
 
         fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['roll_c (°)'],
-                                 line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=4, col=1)
-        fig.update_xaxes(title='Time (s)', row=4, col=1)
-        fig.update_yaxes(title='Roll command (°)', row=4, col=1)
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
                                  y=qtm_yn,
                                  line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=3, col=2)
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=yn_g,
-                                 line=dict(color=color, dash='dash'),
                                  legendgroup=str(i),
                                  showlegend=False,
                                  mode='lines',
@@ -230,17 +149,6 @@ def plot_attitude_vs_time(data, colors_association, fig):
         fig.update_yaxes(title='Yn (m)', row=3, col=2)
 
         fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['pitch_c (°)'],
-                                 line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=4, col=2)
-        fig.update_xaxes(title='Time (s)', row=4, col=2)
-        fig.update_yaxes(title='Pitch command (°)', row=4, col=2)
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
                                  y=data[cf_name]['cf_yaw (°)'],
                                  line=dict(color=color),
                                  legendgroup=str(i),
@@ -248,27 +156,8 @@ def plot_attitude_vs_time(data, colors_association, fig):
                                  mode='lines'
                                  ),
                       row=3, col=3)
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['yaw_g (°)'],
-                                 line=dict(color=color, dash='dash'),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines'
-                                 ),
-                      row=3, col=3)
         fig.update_xaxes(title='Time (s)', row=3, col=3)
         fig.update_yaxes(title='Yaw (°)', row=3, col=3)
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['yaw_c (°)'],
-                                 line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines'
-                                 ),
-                      row=4, col=3)
-        fig.update_xaxes(title='Time (s)', row=4, col=3)
-        fig.update_yaxes(title='Yaw (°)', row=4, col=3)
     return fig
 
 

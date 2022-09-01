@@ -5,71 +5,98 @@ import struct
 
 from fcntl import ioctl
 from swarm_object_class import SwarmObject
+from network_communication_class import NetworkCommunication
+
 from threading import Thread
 from typing import Union
 
 
 class Joystick:
-    def __init__(self, swarm_object: Union[SwarmObject, None] = None):
+    def __init__(self, swarm_object: Union[SwarmObject, None] = None,
+                 network_communication: Union[NetworkCommunication, None] = None,
+                 js_connected: bool = True):
         self.swarm = swarm_object
+        self.network_comm = network_communication
+        self.joystick_connected = js_connected
         self.stopped = False
 
-        print('Joystick initialization:')
-        print('    Available devices:', [('/dev/input/%s' % fn)
-                                         for fn in os.listdir('/dev/input') if fn.startswith('js')])
+        if not self.joystick_connected:
+            self.packet_rec_thread = Thread(target=self.await_packet)
+            self.packet_rec_thread.start()
+        else:
+            print('Joystick initialization:')
+            print('    Available devices:', [('/dev/input/%s' % fn)
+                                             for fn in os.listdir('/dev/input') if fn.startswith('js')])
 
-        # Buttons and axes states initialization
-        self.axis_states = {}
-        self.button_states = {}
+            # Buttons and axes states initialization
+            self.axis_states = {}
+            self.button_states = {}
 
-        self.axis_map = []
-        self.button_map = []
+            self.axis_map = []
+            self.button_map = []
 
-        # Opens the Joystick device
-        self.fn = '/dev/input/js0'
-        print('    Opening %s:' % self.fn)
-        self.js_device = open(self.fn, 'rb')
+            # Opens the Joystick device
+            self.fn = '/dev/input/js0'
+            print('    Opening %s:' % self.fn)
+            self.js_device = open(self.fn, 'rb')
 
-        # Gets the device name
-        buf = array.array('B', [0] * 64)
-        ioctl(self.js_device, 0x80006a13 + (0x10000 * len(buf)), buf)
-        self.js_name = buf.tostring().rstrip(b'\x00').decode('utf-8')
-        print('        Device name: %s' % self.js_name)
+            # Gets the device name
+            buf = array.array('B', [0] * 64)
+            ioctl(self.js_device, 0x80006a13 + (0x10000 * len(buf)), buf)
+            self.js_name = buf.tostring().rstrip(b'\x00').decode('utf-8')
+            print('        Device name: %s' % self.js_name)
 
-        # Gets the number of axes and buttons
-        buf = array.array('B', [0])
-        ioctl(self.js_device, 0x80016a11, buf)
-        self.num_axes = buf[0]
+            # Gets the number of axes and buttons
+            buf = array.array('B', [0])
+            ioctl(self.js_device, 0x80016a11, buf)
+            self.num_axes = buf[0]
 
-        buf = array.array('B', [0])
-        ioctl(self.js_device, 0x80016a12, buf)
-        self.num_buttons = buf[0]
+            buf = array.array('B', [0])
+            ioctl(self.js_device, 0x80016a12, buf)
+            self.num_buttons = buf[0]
 
-        # Gets the buttons and axes names from the corresponding Joystick map data
-        self.button_names, self.axis_names = joystick_map.joystick_map(self.js_name)
+            # Gets the buttons and axes names from the corresponding Joystick map data
+            self.button_names, self.axis_names = joystick_map.joystick_map(self.js_name)
 
-        # Get the axis map.
-        buf = array.array('B', [0] * 0x40)
-        ioctl(self.js_device, 0x80406a32, buf)
-        for axis in buf[:self.num_axes]:
-            axis_name = self.axis_names.get(axis, 'unknown(0x%02x)' % axis)
-            self.axis_map.append(axis_name)
-            self.axis_states[axis_name] = 0.0
+            # Get the axis map.
+            buf = array.array('B', [0] * 0x40)
+            ioctl(self.js_device, 0x80406a32, buf)
+            for axis in buf[:self.num_axes]:
+                axis_name = self.axis_names.get(axis, 'unknown(0x%02x)' % axis)
+                self.axis_map.append(axis_name)
+                self.axis_states[axis_name] = 0.0
 
-        # Get the button map.
-        buf = array.array('H', [0] * 200)
-        ioctl(self.js_device, 0x80406a34, buf)
-        for btn in buf[:self.num_buttons]:
-            btn_name = self.button_names.get(btn, 'unknown(0x%03x)' % btn)
-            self.button_map.append(btn_name)
-            self.button_states[btn_name] = 0.0
+            # Get the button map.
+            buf = array.array('H', [0] * 200)
+            ioctl(self.js_device, 0x80406a34, buf)
+            for btn in buf[:self.num_buttons]:
+                btn_name = self.button_names.get(btn, 'unknown(0x%03x)' % btn)
+                self.button_map.append(btn_name)
+                self.button_states[btn_name] = 0.0
 
-        print('        %d axes found: %s' % (self.num_axes, ', '.join(self.axis_map)))
-        print('        %d buttons found: %s' % (self.num_buttons, ', '.join(self.button_map)))
+            print('        %d axes found: %s' % (self.num_axes, ', '.join(self.axis_map)))
+            print('        %d buttons found: %s' % (self.num_buttons, ', '.join(self.button_map)))
 
-        if self.swarm is not None:
-            self.jsl = Thread(target=self.joystick_inputs)
-            self.jsl.start()
+            if self.swarm is not None:
+                self.jsl = Thread(target=self.joystick_inputs)
+                self.jsl.start()
+
+    def await_packet(self):
+        while not self.stopped:
+            packet, address = self.network_comm.receiver_socket.recvfrom(4096)
+            data = packet.decode('utf-8').split()
+            # sender_ip = data[0]
+            value = float(data[1])
+            command_type = data[2]
+            if command_type == 'button':
+                button = data[3]
+                if button:
+                    self.buttons(button, value)
+            if command_type == 'axis':
+                axis = data[3]
+                if axis:
+                    self.axis(axis, value)
+        self.network_comm.disconnect()
 
     def joystick_inputs(self):
         while not self.stopped:
@@ -79,12 +106,15 @@ class Joystick:
             if buf_type & 0x01:
                 button = self.button_map[number]
                 if button:
+                    self.network_comm.send_packet(str(value) + ' ' + 'button' + ' ' + str(button))
                     self.buttons(button, value)
 
             if buf_type & 0x02:
                 axis = self.axis_map[number]
                 if axis:
+                    self.network_comm.send_packet(str(value) + ' ' + 'axis' + ' ' + str(axis))
                     self.axis(axis, value)
+        self.network_comm.disconnect()
 
     def buttons(self, button, value):
         if button == 'Stop' and value:
@@ -147,22 +177,6 @@ class Joystick:
                         agt.wingman_behaviour()
             else:
                 print('Warning : No swarm leader assigned, wingman command access denied')
-
-        if button == 'Land on air base' and value:
-            if self.swarm.air_base_list:
-                for agt in self.swarm.swarm_agent_list:
-                    if agt.enabled and agt.is_flying:
-                        agt.land_on_air_base()
-            else:
-                print('Warning : No Air Base declared, command access denied')
-
-        if button == 'Takeoff from air base' and value:
-            if self.swarm.air_base_list:
-                for agt in self.swarm.swarm_agent_list:
-                    if agt.enabled and not agt.is_flying:
-                        agt.takeoff_from_air_base()
-            else:
-                print('Warning : No Air Base declared, command access denied')
 
     def axis(self, axis, value):
         fvalue = value / 32767.0

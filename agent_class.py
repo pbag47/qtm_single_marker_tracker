@@ -51,8 +51,8 @@ class Agent:
         self.extpos_test_passed = False
 
         self.setup_finished: bool = False
-        self.initial_battery_voltage = None
-        self.initial_battery_level = None
+        self.initial_battery_voltage: float = 0.0
+        self.initial_battery_level: int = 0
 
         self.initial_position: [float] * 3 = [0, 0, 0]
 
@@ -101,6 +101,7 @@ class Agent:
     def connect_cf(self):
         self.cf.open_link(self.uri)
         self.cf.connected.add_callback(self.cf_connected_callback)
+        self.cf.connection_failed.add_callback(self.cf_connection_failed_callback)
         self.cf.disconnected.add_callback(self.cf_disconnected_callback)
 
     def cf_connected_callback(self, _):
@@ -108,6 +109,12 @@ class Agent:
         self.setup_parameters()
         self.cf.commander.send_setpoint(0, 0, 0, 0)
         self.start_attitude_logs()
+
+    def cf_connection_failed_callback(self, _, __):
+        self.battery_test_passed = True
+        self.extpos_test_passed = True
+        self.enabled = False
+        print(self.name, 'connection attempt failed')
 
     def setup_parameters(self):
         time.sleep(1.5)
@@ -170,6 +177,8 @@ class Agent:
             self.land()
 
     def cf_disconnected_callback(self, _):
+        self.battery_test_passed = True
+        self.extpos_test_passed = True
         self.enabled = False
         print(self.name, 'disconnected')
 
@@ -258,70 +267,60 @@ class Agent:
         self.state = 'Back_to_init'
         self.back_to_init_yaw = self.yaw
 
-    def land_on_air_base(self):
-        print(self.name, ': Land procedure on air base')
-        self.state = 'Land_on_air_base'
-        self.standby_position = [self.extpos.x, self.extpos.y, self.extpos.z]
-        self.standby_yaw = self.yaw
-
-    def sleep_on_air_base(self):
-        self.state = 'Sleep_on_air_base'
-        self.is_flying = False
-        self.cf.commander.send_stop_setpoint()
-
-    def takeoff_from_air_base(self):
-        print(self.name, ': Takeoff procedure from air base')
-        self.state = 'Takeoff_from_air_base'
-
-    def attitude_control_law(self, position_to_reach: [float] * 3, yaw_to_reach: float):
-        error_x = position_to_reach[0] - self.extpos.x
-        error_y = position_to_reach[1] - self.extpos.y
-        error_z = position_to_reach[2] - self.extpos.z
-
-        error_xn = error_x * np.cos(self.yaw * np.pi / 180) + error_y * np.sin(self.yaw * np.pi / 180)
-        error_yn = - error_x * np.sin(self.yaw * np.pi / 180) + error_y * np.cos(self.yaw * np.pi / 180)
-
-        velocity_xn = self.velocity[0] * np.cos(self.yaw * np.pi / 180) + self.velocity[1] * np.sin(
-            self.yaw * np.pi / 180)
-        velocity_yn = (- self.velocity[0] * np.sin(self.yaw * np.pi / 180)
-                       + self.velocity[1] * np.cos(self.yaw * np.pi / 180))
-
-        px = self.kp_xy * error_xn
-        dx = - self.kd_xy * velocity_xn
-        pitch = (px + dx) * 180 / np.pi
-
-        py = self.kp_xy * error_yn
-        dy = - self.kd_xy * velocity_yn
-        roll = - (py + dy) * 180 / np.pi
-
-        yaw = - self.kp_yaw * (yaw_to_reach - self.yaw)
-
-        pz = self.kp_z * error_z
-        iz = self.previous_iz + self.ki_z * error_z * self.delta_t
-        dz = - self.kd_z * self.velocity[2]
-        thrust = round(self.thrust_at_steady_state + pz + iz + dz)
-
-        if thrust > 65000:
-            thrust = 65000
-        elif thrust < 0:
-            thrust = 0
-
-        if roll > 15:
-            roll = 15
-        elif roll < -15:
-            roll = -15
-
-        if pitch > 15:
-            pitch = 15
-        elif pitch < -15:
-            pitch = -15
-
+    def log_flight_data(self):
         self.csv_logger.writerow([self.name, self.timestamp,
                                   self.extpos.x, self.extpos.y, self.extpos.z, self.yaw,
-                                  self.velocity[0], self.velocity[1], self.velocity[2],
-                                  position_to_reach[0], position_to_reach[1], position_to_reach[2], yaw_to_reach,
-                                  pz, dz, iz,
-                                  roll, pitch, yaw, thrust])
+                                  self.velocity[0], self.velocity[1], self.velocity[2]])
 
-        self.previous_iz = iz
-        return roll, pitch, yaw, thrust
+    # def attitude_control_law(self, position_to_reach: [float] * 3, yaw_to_reach: float):
+    #     error_x = position_to_reach[0] - self.extpos.x
+    #     error_y = position_to_reach[1] - self.extpos.y
+    #     error_z = position_to_reach[2] - self.extpos.z
+    #
+    #     error_xn = error_x * np.cos(self.yaw * np.pi / 180) + error_y * np.sin(self.yaw * np.pi / 180)
+    #     error_yn = - error_x * np.sin(self.yaw * np.pi / 180) + error_y * np.cos(self.yaw * np.pi / 180)
+    #
+    #     velocity_xn = self.velocity[0] * np.cos(self.yaw * np.pi / 180) + self.velocity[1] * np.sin(
+    #         self.yaw * np.pi / 180)
+    #     velocity_yn = (- self.velocity[0] * np.sin(self.yaw * np.pi / 180)
+    #                    + self.velocity[1] * np.cos(self.yaw * np.pi / 180))
+    #
+    #     px = self.kp_xy * error_xn
+    #     dx = - self.kd_xy * velocity_xn
+    #     pitch = (px + dx) * 180 / np.pi
+    #
+    #     py = self.kp_xy * error_yn
+    #     dy = - self.kd_xy * velocity_yn
+    #     roll = - (py + dy) * 180 / np.pi
+    #
+    #     yaw = - self.kp_yaw * (yaw_to_reach - self.yaw)
+    #
+    #     pz = self.kp_z * error_z
+    #     iz = self.previous_iz + self.ki_z * error_z * self.delta_t
+    #     dz = - self.kd_z * self.velocity[2]
+    #     thrust = round(self.thrust_at_steady_state + pz + iz + dz)
+    #
+    #     if thrust > 65000:
+    #         thrust = 65000
+    #     elif thrust < 0:
+    #         thrust = 0
+    #
+    #     if roll > 15:
+    #         roll = 15
+    #     elif roll < -15:
+    #         roll = -15
+    #
+    #     if pitch > 15:
+    #         pitch = 15
+    #     elif pitch < -15:
+    #         pitch = -15
+    #
+    #     self.csv_logger.writerow([self.name, self.timestamp,
+    #                               self.extpos.x, self.extpos.y, self.extpos.z, self.yaw,
+    #                               self.velocity[0], self.velocity[1], self.velocity[2],
+    #                               position_to_reach[0], position_to_reach[1], position_to_reach[2], yaw_to_reach,
+    #                               pz, dz, iz,
+    #                               roll, pitch, yaw, thrust])
+    #
+    #     self.previous_iz = iz
+    #     return roll, pitch, yaw, thrust

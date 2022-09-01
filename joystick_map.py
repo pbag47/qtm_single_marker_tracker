@@ -43,9 +43,9 @@ def joystick_map(device_name: str):
                     0x124: 'Yaw-',                      # 5
                     0x125: 'Yaw+',                      # 6
                     0x126: 'Initial position',          # 7
-                    0x127: 'Land on air base',          # 8
+                    0x127: '8',                         # 8
                     0x128: 'Height consensus',          # 9
-                    0x129: 'Takeoff from air base',     # 10
+                    0x129: '10',                        # 10
                     0x12a: 'Wingman',                   # 11
                     0x12b: '12',                        # 12
                 }
