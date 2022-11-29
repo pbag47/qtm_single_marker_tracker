@@ -15,12 +15,12 @@ class Agent:
         self.uri: str = uri
 
         # ---- Parameters ---- #
-        self.max_roll: float = 45  # Maximum |roll| tolerance before emergency stop (°)
+        self.max_roll: float = 45   # Maximum |roll| tolerance before emergency stop (°)
         self.max_pitch: float = 45  # Maximum |pitch| tolerance before emergency stop (°)
 
-        self.x_boundaries: List[float] = [-1.5, 1.5]  # [Minimum x coordinate (m), Maximum x coordinate (m)]
-        self.y_boundaries: List[float] = [-1.5, 1.5]  # [Minimum y coordinate (m), Maximum y coordinate (m)]
-        self.z_boundaries: List[float] = [-0.1, 1.50]  # [Minimum z coordinate (m), Maximum z coordinate (m)]
+        self.x_boundaries: List[float] = [-1.40, 1.40]  # [Minimum x coordinate (m), Maximum x coordinate (m)]
+        self.y_boundaries: List[float] = [-1.40, 1.40]  # [Minimum y coordinate (m), Maximum y coordinate (m)]
+        self.z_boundaries: List[float] = [-0.10, 1.10]  # [Minimum z coordinate (m), Maximum z coordinate (m)]
 
         # Crazyflie parameters:
         # -- Warning -- May cause chaotic flight when badly configured, do not attempt to change these settings without
@@ -39,6 +39,7 @@ class Agent:
         self.log_config.add_variable('stabilizer.roll', 'float')  # Retrieves the roll from Crazyflie stabilizer (EKF)
         self.log_config.add_variable('stabilizer.pitch', 'float')  # Retrieves the pitch from Crazyflie stabilizer (EKF)
         self.log_config.add_variable('stabilizer.yaw', 'float')  # Retrieves the yaw from Crazyflie stabilizer (EKF)
+
         # Retrieves the battery mode (0 = nominal mode, 1 = loading, 2 = loading completed, 3 = Low energy mode)
         self.log_config.add_variable('pm.state', 'float')
 
@@ -49,40 +50,41 @@ class Agent:
         self.enabled: bool = False
         self.battery_test_passed = False
         self.extpos_test_passed = False
-
         self.setup_finished: bool = False
-        self.initial_battery_voltage: float = 0.0
-        self.initial_battery_level: int = 0
+        self.initial_battery_voltage: float = 0.0   # (V)
+        self.initial_battery_level: int = 0         # (%)
 
-        self.initial_position: [float] * 3 = [0, 0, 0]
+        self.initial_position: [float] * 3 = [0, 0, 0]  # [x (m), y (m), z (m)]
 
-        self.takeoff_position: List[float] = []
-        self.takeoff_yaw: float = 0.0
-        self.takeoff_height: float = 0.5
+        self.takeoff_position: List[float] = []     # [x (m), y (m), z (m)]
+        self.takeoff_yaw: float = 0.0               # (°)
+        self.takeoff_height: float = 0.5            # (m)
 
-        self.land_position: List[float] = []
-        self.land_yaw: float = 0.0
+        self.land_position: List[float] = []        # [x (m), y (m), z (m)]
+        self.land_yaw: float = 0.0                  # (°)
 
-        self.standby_position: List[float] = []
-        self.standby_yaw: float = 0.0
+        self.standby_position: List[float] = []     # [x (m), y (m), z (m)]
+        self.standby_yaw: float = 0.0               # (°)
 
-        self.z_consensus_xy_position: List[float] = []
-        self.z_consensus_vz: float = 0.0
-        self.z_consensus_connectivity: List[str] = []
+        self.consensus_connectivity: List[str] = []
+        self.xy_consensus_offset_from_leader: (float, float) = (0, 0)   # (dx (m), dy (m))
+        self.z_consensus_xy_position: List[float] = []                  # [x (m), y (m)]
+        self.z_consensus_vz: float = 0.0                                # (m/s)
 
         self.xy_auto_avoid_obstacles_list: List[[float] * 3] = []
         self.xy_auto_avoid_agents_list: List[str] = []
 
-        self.wingman_z: float = 0
-        self.wingman_yaw: float = 0
+        self.wingman_z: float = 0       # (m)
+        self.wingman_yaw: float = 0     # (°)
 
-        self.back_to_init_yaw: float = 0
+        self.back_to_init_yaw: float = 0    # (°)
 
-        self.timestamp: float = 0.0
+        self.timestamp: float = 0.0     # (s)
         self.extpos: RT3DMarkerPositionNoLabel = RT3DMarkerPositionNoLabel(0, 0, 0, None)
-        self.yaw: float = 0.0
-        self.velocity: [float] * 3 = [0.0, 0.0, 0.0]
-        self.delta_t: float = 1.0
+        self.yaw: float = 0.0                           # (°)
+        self.velocity: [float] * 3 = [0.0, 0.0, 0.0]    # [vx (m/s), vy (m/s), vz (m/s)]
+        self.delta_t: float = 1.0                       # (s)
+
         self.invalid_6dof_count: int = 0
 
         self.kp_xy: float = 1
@@ -199,17 +201,17 @@ class Agent:
     def update_extpos(self, marker: RT3DMarkerPositionNoLabel, timestamp: float):
         if timestamp > self.timestamp:
             self.delta_t = timestamp - self.timestamp
-            self.update_velocity(marker, timestamp)
+            self.update_velocity(marker)
             self.timestamp = timestamp
             self.extpos = RT3DMarkerPositionNoLabel(marker.x * 10 ** -3, marker.y * 10 ** -3, marker.z * 10 ** -3,
                                                     marker.id)
         else:
             print('Warning :', self.name, ': Several extpos packets received for the same timestamp')
 
-    def update_velocity(self, marker: RT3DMarkerPositionNoLabel, timestamp: float):
-        self.velocity[0] = (marker.x * 10 ** -3 - self.extpos.x) / (timestamp - self.timestamp)
-        self.velocity[1] = (marker.y * 10 ** -3 - self.extpos.y) / (timestamp - self.timestamp)
-        self.velocity[2] = (marker.z * 10 ** -3 - self.extpos.z) / (timestamp - self.timestamp)
+    def update_velocity(self, marker: RT3DMarkerPositionNoLabel):
+        self.velocity[0] = (marker.x * 10 ** -3 - self.extpos.x) / self.delta_t
+        self.velocity[1] = (marker.y * 10 ** -3 - self.extpos.y) / self.delta_t
+        self.velocity[2] = (marker.z * 10 ** -3 - self.extpos.z) / self.delta_t
 
     def set_initial_position(self, position: [float] * 3):
         self.initial_position = position
@@ -217,8 +219,11 @@ class Agent:
     def set_takeoff_height(self, height: float):
         self.takeoff_height = height
 
-    def set_z_consensus_connectivity(self, connections: List[str]):
-        self.z_consensus_connectivity = connections
+    def set_consensus_connectivity(self, connections: List[str]):
+        self.consensus_connectivity = connections
+
+    def set_xy_consensus_offset_from_leader(self, offset: (float, float)):
+        self.xy_consensus_offset_from_leader = offset
 
     def set_agents_to_avoid(self, agents_names: List[str]):
         self.xy_auto_avoid_agents_list = agents_names
@@ -257,70 +262,20 @@ class Agent:
         self.standby_position = [self.extpos.x, self.extpos.y, self.extpos.z]
         self.standby_yaw = self.yaw
 
+    def xy_consensus(self):
+        print(self.name, ': xy consensus')
+        self.state = 'xy_consensus'
+
     def z_consensus(self):
-        print(self.name, ': Height consensus')
+        print(self.name, ': z consensus')
         self.state = 'z_consensus'
         self.z_consensus_xy_position = [self.extpos.x, self.extpos.y]
 
     def back_to_initial_position(self):
         print(self.name, ': Back to initial position')
         self.state = 'Back_to_init'
-        self.back_to_init_yaw = self.yaw
+        self.back_to_init_yaw = 0
 
-    def log_flight_data(self):
-        self.csv_logger.writerow([self.name, self.timestamp,
-                                  self.extpos.x, self.extpos.y, self.extpos.z, self.yaw,
-                                  self.velocity[0], self.velocity[1], self.velocity[2]])
-
-    # def attitude_control_law(self, position_to_reach: [float] * 3, yaw_to_reach: float):
-    #     error_x = position_to_reach[0] - self.extpos.x
-    #     error_y = position_to_reach[1] - self.extpos.y
-    #     error_z = position_to_reach[2] - self.extpos.z
-    #
-    #     error_xn = error_x * np.cos(self.yaw * np.pi / 180) + error_y * np.sin(self.yaw * np.pi / 180)
-    #     error_yn = - error_x * np.sin(self.yaw * np.pi / 180) + error_y * np.cos(self.yaw * np.pi / 180)
-    #
-    #     velocity_xn = self.velocity[0] * np.cos(self.yaw * np.pi / 180) + self.velocity[1] * np.sin(
-    #         self.yaw * np.pi / 180)
-    #     velocity_yn = (- self.velocity[0] * np.sin(self.yaw * np.pi / 180)
-    #                    + self.velocity[1] * np.cos(self.yaw * np.pi / 180))
-    #
-    #     px = self.kp_xy * error_xn
-    #     dx = - self.kd_xy * velocity_xn
-    #     pitch = (px + dx) * 180 / np.pi
-    #
-    #     py = self.kp_xy * error_yn
-    #     dy = - self.kd_xy * velocity_yn
-    #     roll = - (py + dy) * 180 / np.pi
-    #
-    #     yaw = - self.kp_yaw * (yaw_to_reach - self.yaw)
-    #
-    #     pz = self.kp_z * error_z
-    #     iz = self.previous_iz + self.ki_z * error_z * self.delta_t
-    #     dz = - self.kd_z * self.velocity[2]
-    #     thrust = round(self.thrust_at_steady_state + pz + iz + dz)
-    #
-    #     if thrust > 65000:
-    #         thrust = 65000
-    #     elif thrust < 0:
-    #         thrust = 0
-    #
-    #     if roll > 15:
-    #         roll = 15
-    #     elif roll < -15:
-    #         roll = -15
-    #
-    #     if pitch > 15:
-    #         pitch = 15
-    #     elif pitch < -15:
-    #         pitch = -15
-    #
-    #     self.csv_logger.writerow([self.name, self.timestamp,
-    #                               self.extpos.x, self.extpos.y, self.extpos.z, self.yaw,
-    #                               self.velocity[0], self.velocity[1], self.velocity[2],
-    #                               position_to_reach[0], position_to_reach[1], position_to_reach[2], yaw_to_reach,
-    #                               pz, dz, iz,
-    #                               roll, pitch, yaw, thrust])
-    #
-    #     self.previous_iz = iz
-    #     return roll, pitch, yaw, thrust
+    def pursuit(self):
+        print(self.name, ': pursuit mode engaged')
+        self.state = 'Pursuit'

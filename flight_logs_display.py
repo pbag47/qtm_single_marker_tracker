@@ -1,195 +1,156 @@
 import csv
 import numpy as np
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+from dash import dcc, html, Dash
 
 
 def extract_csv_data(filename):
     file = open(filename, 'r')
     reader = csv.DictReader(file)
     data_list = list(reader)
-    body_names = set(data_list_element['Crazyflie name'] for data_list_element in data_list)
-    data = {body_name: {key: [] for key in data_list[0].keys() if key != 'Crazyflie name'}
-            for body_name in body_names}
-    for i in range(len(data_list)):
-        for key in data_list[0].keys():
-            if key != 'Crazyflie name':
-                data[data_list[i]['Crazyflie name']][key].append(float(data_list[i][key]))
-    return data
+    bodies_names = []
+    variables_names = ['QTM packet timestamp (s)']
+    sampling_frequency = 25  # Hz
+    for key in data_list[0].keys():
+        if key != 'QTM packet timestamp (s)':
+            k = key.split()
+            name = k[0]
+            variable = k[1]
+            try:
+                _ = bodies_names.index(name)
+            except ValueError:
+                bodies_names.append(name)
+            try:
+                _ = variables_names.index(variable)
+            except ValueError:
+                variables_names.append(variable)
+        else:
+            sampling_period = float(data_list[1][key]) - float(data_list[0][key])
+            sampling_frequency = round(1 / sampling_period)
+    data = {body_name: {variable_name: [] for variable_name in variables_names} for body_name in bodies_names}
+    for key in data_list[0].keys():
+        if key == 'QTM packet timestamp (s)':
+            for body_name in bodies_names:
+                for i in range(len(data_list)):
+                    data[body_name][key].append(data_list[i][key])
+        else:
+            k = key.split()
+            name = k[0]
+            variable = k[1]
+            for i in range(len(data_list)):
+                data[name][variable].append(data_list[i][key])
+    return data, len(data_list), sampling_frequency
 
 
-def plot_3d_trajectory(trajectory, flight_zone_boundaries, colors_association, fig):
+def plot_3d_trajectory(figure, flight_zone_boundaries, colors_association, sampling_frequency, samples_number):
+    global LOGS_DATA
+
     # Plot x, y, and z vectors at the origin
-    fig.add_trace(go.Scatter3d(x=[0, 1], y=[0, 0], z=[0, 0], line=dict(color='red', width=20),
-                               name='X vector', legendgroup='0', mode='lines'),
-                  row=1, col=1)
-    fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 1], z=[0, 0], line=dict(color='green', width=20),
-                               name='Y vector', legendgroup='0', mode='lines'),
-                  row=1, col=1)
-    fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[0, 1], line=dict(color='blue', width=20),
-                               name='Z vector', legendgroup='0', mode='lines'),
-                  row=1, col=1)
+    figure.add_trace(go.Scatter3d(x=[0, 1], y=[0, 0], z=[0, 0], line=dict(color='red', width=20),
+                                  name='X vector', legendgroup='0', mode='lines'))
+    figure.add_trace(go.Scatter3d(x=[0, 0], y=[0, 1], z=[0, 0], line=dict(color='green', width=20),
+                                  name='Y vector', legendgroup='0', mode='lines'))
+    figure.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[0, 1], line=dict(color='blue', width=20),
+                                  name='Z vector', legendgroup='0', mode='lines'))
 
     # Plot cf trajectories
-    i = 0
-    for cf_name in trajectory.keys():
+    for cf_name in LOGS_DATA.keys():
         color = colors_association[cf_name]
-        i = i + 1
-        # Main line
-        fig.add_trace(go.Scatter3d(x=trajectory[cf_name]['QTM_x (m)'],
-                                   y=trajectory[cf_name]['QTM_y (m)'],
-                                   z=trajectory[cf_name]['QTM_z (m)'],
-                                   line=dict(color=color),
-                                   name=cf_name + ' actual state',
-                                   legendgroup=str(i),
-                                   mode='lines'
-                                   ),
-                      row=1, col=1)
+        figure.add_trace(go.Scatter3d(x=[LOGS_DATA[cf_name]['x'][0]],
+                                      y=[LOGS_DATA[cf_name]['y'][0]],
+                                      z=[LOGS_DATA[cf_name]['z'][0]],
+                                      line=dict(color=color),
+                                      name=cf_name,
+                                      legendgroup=cf_name,
+                                      mode='markers',
+                                      marker=dict(size=4)
+                                      ))
 
-        # Start point
-        fig.add_trace(go.Scatter3d(x=[trajectory[cf_name]['QTM_x (m)'][0]],
-                                   y=[trajectory[cf_name]['QTM_y (m)'][0]],
-                                   z=[trajectory[cf_name]['QTM_z (m)'][0]],
-                                   line=dict(color=color),
-                                   legendgroup=str(i),
-                                   showlegend=False,
-                                   mode='markers',
-                                   marker=dict(size=4)
-                                   ),
-                      row=1, col=1)
-
-        # Stop point
-        fig.add_trace(go.Scatter3d(x=[trajectory[cf_name]['QTM_x (m)'][-1]],
-                                   y=[trajectory[cf_name]['QTM_y (m)'][-1]],
-                                   z=[trajectory[cf_name]['QTM_z (m)'][-1]],
-                                   line=dict(color=color),
-                                   legendgroup=str(i),
-                                   showlegend=False,
-                                   mode='markers',
-                                   marker=dict(symbol='cross', size=4)
-                                   ),
-                      row=1, col=1)
-
-    fig.update_scenes(xaxis=dict(range=[flight_zone_boundaries[0][0], flight_zone_boundaries[0][1]],
-                                 title='X (m)'),
-                      yaxis=dict(range=[flight_zone_boundaries[1][0], flight_zone_boundaries[1][1]],
-                                 title='Y (m)'),
-                      zaxis=dict(range=[flight_zone_boundaries[2][0], flight_zone_boundaries[2][1]],
-                                 title='Z (m)'),
-                      aspectmode='manual',
-                      aspectratio=dict(x=1,
-                                       y=abs((flight_zone_boundaries[1][1] - flight_zone_boundaries[1][0]) /
-                                             (flight_zone_boundaries[0][1] - flight_zone_boundaries[0][0])
-                                             ),
-                                       z=abs((flight_zone_boundaries[2][1] - flight_zone_boundaries[2][0]) /
-                                             (flight_zone_boundaries[0][1] - flight_zone_boundaries[0][0])
-                                             )
-                                       ),
-                      row=1, col=1)
-    return fig
-
-
-def plot_attitude_vs_time(data, colors_association, fig):
-    i = 0
-    for cf_name in data.keys():
-        i = i + 1
-        color = colors_association[cf_name]
-
-        qtm_xn = []
-        qtm_yn = []
-        for j in range(len(data[cf_name]['QTM packet timestamp (s)'])):
-            qtm_xn.append(data[cf_name]['QTM_x (m)'][j] * np.cos(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180)
-                          + data[cf_name]['QTM_y (m)'][j] * np.sin(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180))
-
-            qtm_yn.append(- data[cf_name]['QTM_x (m)'][j] * np.sin(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180)
-                          + data[cf_name]['QTM_y (m)'][j] * np.cos(data[cf_name]['cf_yaw (°)'][j] * np.pi / 180))
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['QTM_z (m)'],
-                                 line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=1, col=4)
-        fig.update_xaxes(title='Time (s)', row=1, col=4)
-        fig.update_yaxes(title='Z (m)', row=1, col=4)
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['QTM_vz (m/s)'],
-                                 line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=2, col=4)
-        fig.update_xaxes(title='Time (s)', row=2, col=4)
-        fig.update_yaxes(title='VZ (m/s)', row=2, col=4)
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=qtm_xn,
-                                 line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=3, col=1)
-        fig.update_xaxes(title='Time (s)', row=3, col=1)
-        fig.update_yaxes(title='Xn (m)', row=3, col=1)
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=qtm_yn,
-                                 line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines',
-                                 ),
-                      row=3, col=2)
-        fig.update_xaxes(title='Time (s)', row=3, col=2)
-        fig.update_yaxes(title='Yn (m)', row=3, col=2)
-
-        fig.add_trace(go.Scatter(x=data[cf_name]['QTM packet timestamp (s)'],
-                                 y=data[cf_name]['cf_yaw (°)'],
-                                 line=dict(color=color),
-                                 legendgroup=str(i),
-                                 showlegend=False,
-                                 mode='lines'
-                                 ),
-                      row=3, col=3)
-        fig.update_xaxes(title='Time (s)', row=3, col=3)
-        fig.update_yaxes(title='Yaw (°)', row=3, col=3)
-    return fig
+    # Create frames for 3D graph animation
+    frame_dicts = []
+    indices = np.round(np.linspace(0, samples_number - 1, round(samples_number / (0.5 * sampling_frequency))))
+    for i in indices:
+        vector_frames_data_list = [go.Scatter3d(x=[0, 1], y=[0, 0], z=[0, 0]),
+                                   go.Scatter3d(x=[0, 0], y=[0, 1], z=[0, 0]),
+                                   go.Scatter3d(x=[0, 0], y=[0, 0], z=[0, 1])]
+        cf_frame_data_list = [go.Scatter3d(x=[LOGS_DATA[cf_name]['x'][int(i)]],
+                                           y=[LOGS_DATA[cf_name]['y'][int(i)]],
+                                           z=[LOGS_DATA[cf_name]['z'][int(i)]]
+                                           ) for cf_name in LOGS_DATA.keys()]
+        data = vector_frames_data_list + cf_frame_data_list
+        frame_dict = dict(data=data, name=str(int(i)))
+        frame_dicts.append(frame_dict)
+    figure.frames = frame_dicts
+    figure.update_scenes(xaxis=dict(range=[flight_zone_boundaries[0][0], flight_zone_boundaries[0][1]],
+                                    title='X (m)'),
+                         yaxis=dict(range=[flight_zone_boundaries[1][0], flight_zone_boundaries[1][1]],
+                                    title='Y (m)'),
+                         zaxis=dict(range=[flight_zone_boundaries[2][0], flight_zone_boundaries[2][1]],
+                                    title='Z (m)'),
+                         aspectmode='manual',
+                         aspectratio=dict(x=1,
+                                          y=abs((flight_zone_boundaries[1][1] - flight_zone_boundaries[1][0]) /
+                                                (flight_zone_boundaries[0][1] - flight_zone_boundaries[0][0])),
+                                          z=abs((flight_zone_boundaries[2][1] - flight_zone_boundaries[2][0]) /
+                                                (flight_zone_boundaries[0][1] - flight_zone_boundaries[0][0]))
+                                          ))
+    return figure
 
 
 if __name__ == '__main__':
-    flight_area_limits = [[-2.5, 2.5], [-2.5, 2.5], [0, 2]]
-    cf_colors = {'cf1': 'white',
-                 'cf2': 'cyan',
-                 'cf3': 'yellow',
-                 'cf4': 'magenta',
-                 'cf5': 'blue',
-                 'cf6': 'red',
-                 'cf7': 'green',
-                 'cf8': 'pink',
-                 'cf9': 'brown',
-                 'cf10': 'orange'}
+    flight_area_limits = [[-2.5, 2.5], [-2.5, 2.5], [-0.1, 2]]
+    frame_setup = dict(duration=500, redraw=True)
+    transition_setup = dict(duration=100, easing='linear')
+    cf_colors = dict(cf1='black',
+                     cf2='cyan',
+                     cf3='yellow',
+                     cf4='magenta',
+                     cf5='blue',
+                     cf6='red',
+                     cf7='green',
+                     cf8='pink',
+                     cf9='brown',
+                     cf10='orange')
 
-    logs_data = extract_csv_data('logs.csv')
-    figure = make_subplots(rows=4, cols=4,
-                           specs=[[{'type': 'scatter3d', 'rowspan': 2, 'colspan': 3}, None, None, {'type': 'scatter'}],
-                                  [None, None, None, {'type': 'scatter'}],
-                                  [{'type': 'scatter'}, {'type': 'scatter'}, {'type': 'scatter'}, {'type': 'scatter'}],
-                                  [{'type': 'scatter'}, {'type': 'scatter'}, {'type': 'scatter'}, {'type': 'scatter'}]],
-                           subplot_titles=('3D trajectory', 'Target Z & actual Z vs time',
-                                           'VZ vs time', 'Target Xn & Xn vs time', 'Target Yn & Yn vs time',
-                                           'Target yaw & Measured yaw vs time', 'Z PID components vs time',
-                                           'Roll command vs time', 'Pitch command vs time', 'Yaw command vs time',
-                                           'Thrust command vs time'),
-                           shared_xaxes=True,
-                           horizontal_spacing=0.05)
-    figure.update_layout(title_text='Flight logs', template='plotly_dark', legend_tracegroupgap=50)
+    LOGS_DATA, step_number, sample_rate = extract_csv_data('logs.csv')
 
-    figure = plot_3d_trajectory(logs_data, flight_area_limits, cf_colors, figure)
-    figure = plot_attitude_vs_time(logs_data, cf_colors, figure)
+    fig = go.Figure()
+    fig = plot_3d_trajectory(fig, flight_area_limits, cf_colors, sample_rate, step_number)
 
-    figure.show()
+    app = Dash()
+    app.layout = html.Div([dcc.Graph(id='3d_graph', figure=fig, animate=True)])
+
+    slider = dict(pad=dict(b=10,
+                           t=60),
+                  len=0.9,
+                  x=0.1,
+                  y=0,
+                  steps=[dict(args=[[f.name], dict(frame=frame_setup,
+                                                   mode='immediate',
+                                                   fromcurrent=True,
+                                                   transition=transition_setup)],
+                              label=str(k),
+                              method='animate') for k, f in enumerate(fig.frames)])
+
+    fig.update_layout(title_text='Flight logs',
+                      # template='plotly_dark',
+                      legend_tracegroupgap=10,
+                      updatemenus=[dict(type='buttons',
+                                        buttons=[dict(label='Play',
+                                                      method='animate',
+                                                      args=[None, dict(frame=frame_setup)]),
+                                                 dict(label='Pause',
+                                                      method='animate',
+                                                      args=[[None], dict(frame=dict(duration=0,
+                                                                                    redraw=True))
+                                                            ])],
+                                        direction='left',
+                                        pad=dict(r=10, t=70),
+                                        x=0.1,
+                                        y=0
+                                        )
+                                   ],
+                      sliders=[slider]
+                      )
+
+    app.run_server()

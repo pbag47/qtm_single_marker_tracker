@@ -124,7 +124,8 @@ class Joystick:
                 agt.stop()
             self.stopped = True
 
-        if button == 'Takeoff / Land' and value:
+        if button == 'Takeoff/Land' and value:
+            print('Takeoff / Land button triggered')
             for agt in self.swarm.swarm_agent_list:
                 if agt.enabled and not agt.is_flying:
                     agt.takeoff()
@@ -132,11 +133,13 @@ class Joystick:
                     agt.land()
 
         if button == 'Standby' and value:
+            print('Standby button triggered')
             for agt in self.swarm.swarm_agent_list:
                 if agt.enabled and agt.is_flying:
                     agt.standby()
 
-        if button == 'Manual flight' and value:
+        if button == 'Manual_flight' and value:
+            print('Manual flight button triggered')
             if any([agt.state == 'z_consensus'
                     or agt.state == 'Takeoff'
                     or agt.state == 'Land' for agt in self.swarm.swarm_agent_list]):
@@ -160,21 +163,39 @@ class Joystick:
         if button == 'Yaw+' and value:
             self.swarm.manual_yaw = self.swarm.manual_yaw - 22.5
 
-        if button == 'Initial position' and value:
+        if button == 'Initial_position' and value:
+            print('Initial position button triggered')
             for agt in self.swarm.swarm_agent_list:
                 if agt.enabled and agt.is_flying:
                     agt.back_to_initial_position()
 
-        if button == 'Height consensus' and value:
+        if button == 'xy_consensus' and value:
+            print('xy consensus button triggered')
+            for agt in self.swarm.swarm_agent_list:
+                if agt.enabled and agt.is_flying:
+                    agt.xy_consensus()
+
+        if button == 'z_consensus' and value:
+            print('Height consensus button triggered')
             for agt in self.swarm.swarm_agent_list:
                 if agt.enabled and agt.is_flying:
                     agt.z_consensus()
 
         if button == 'Wingman' and value:
+            print('Wingman button triggered')
             if self.swarm.swarm_leader is not None:
                 for agt in self.swarm.swarm_agent_list:
-                    if agt.enabled and agt.is_flying and not agt.state == 'Manual':
+                    if agt.enabled and agt.is_flying and agt.name == self.swarm.swarm_leader:
+                        agt.manual_flight()
+                    elif agt.enabled and agt.is_flying and not agt.state == 'Manual':
                         agt.wingman_behaviour()
+
+        if button == 'Pursuit' and value:
+            print('Pursuit button triggered')
+            if self.swarm.target is not None and self.swarm.chaser is not None:
+                for agt in self.swarm.swarm_agent_list:
+                    if agt.enabled and agt.is_flying:
+                        agt.pursuit()
             else:
                 print('Warning : No swarm leader assigned, wingman command access denied')
 
@@ -205,7 +226,7 @@ class Joystick:
             self.swarm.manual_yaw = self.swarm.manual_yaw - 2 * fvalue ** 3
 
         if axis == 'height':
-            self.swarm.manual_z = 1 - fvalue
+            self.swarm.manual_z = (1 - fvalue) / 2
 
         if axis == 'height2':
             self.swarm.manual_z = self.swarm.manual_z - 0.01 * fvalue

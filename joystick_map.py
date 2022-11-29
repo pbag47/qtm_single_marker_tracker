@@ -12,14 +12,14 @@ def joystick_map(device_name: str):
 
         button_names = {
                     0x120: 'Stop',              # 1 / trigger
-                    0x121: 'Takeoff / Land',    # 2
+                    0x121: 'Takeoff/Land',      # 2
                     0x122: 'Standby',           # 3
-                    0x123: 'Manual flight',     # 4
+                    0x123: 'Manual_flight',     # 4
                     0x124: 'Yaw-',              # 5
                     0x125: 'Yaw+',              # 6
-                    0x126: 'Initial position',  # 7
+                    0x126: 'Initial_position',  # 7
                     0x127: '8',                 # 8
-                    0x128: 'Height consensus',  # 9
+                    0x128: 'Height_consensus',  # 9
                     0x129: '10',                # 10
                     0x12a: 'Wingman',           # 11
                     0x12b: '12',                # 12
@@ -37,17 +37,17 @@ def joystick_map(device_name: str):
 
         button_names = {
                     0x120: 'Stop',                      # 1 / trigger
-                    0x121: 'Takeoff / Land',            # 2
+                    0x121: 'Takeoff/Land',              # 2
                     0x122: 'Standby',                   # 3
-                    0x123: 'Manual flight',             # 4
+                    0x123: 'Manual_flight',             # 4
                     0x124: 'Yaw-',                      # 5
                     0x125: 'Yaw+',                      # 6
-                    0x126: 'Initial position',          # 7
+                    0x126: 'Initial_position',          # 7
                     0x127: '8',                         # 8
-                    0x128: 'Height consensus',          # 9
-                    0x129: '10',                        # 10
+                    0x128: 'z_consensus',               # 9
+                    0x129: 'xy_consensus',              # 10
                     0x12a: 'Wingman',                   # 11
-                    0x12b: '12',                        # 12
+                    0x12b: 'Pursuit',                   # 12
                 }
 
     elif device_name == 'Microsoft X-Box One S pad' and mode == 1:

@@ -45,18 +45,19 @@ def initial_uav_detection(agents: List[Agent], markers: List[RT3DMarkerPositionN
             break
 
 
-def uav_tracking(agents: List[Agent], markers: List[RT3DMarkerPositionNoLabel], timestamp: float):
+def uav_tracking(agents: List[Agent], markers: List[RT3DMarkerPositionNoLabel], timestamp: float) -> List[Agent]:
     markers_ids = [mk.id for mk in markers]
-
+    lost_uav = []
     for agt in agents:
-        if agt.setup_finished and agt.enabled:
-            try:
-                index = markers_ids.index(agt.extpos.id)
-                agt.update_extpos(markers[index], timestamp)
-                agt.send_external_position()
-            except ValueError:
-                print(' ---- Warning ----', agt.name, 'tracking lost, switching the engines off')
-                agt.stop()
+        try:
+            index = markers_ids.index(agt.extpos.id)
+            agt.update_extpos(markers[index], timestamp)
+            agt.send_external_position()
+        except ValueError:
+            print(' ---- Warning ----', agt.name, 'tracking lost, switching the engines off')
+            agt.stop()
+            lost_uav.append(agt)
+    return lost_uav
 
 
 def distance_init_pos_to_marker(position_1: [float] * 3, position_2: [float] * 3):
