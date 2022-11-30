@@ -97,7 +97,7 @@ def main():
                   swarm_object_class.Agent('cf9', 'radio://0/89/2M/E7E7E7E700'),
                   swarm_object_class.Agent('cf10', 'radio://0/90/2M/E7E7E7E700')]
 
-    all_agents[0].set_initial_position([0.0, 0.0, 0.0])
+    all_agents[0].set_initial_position([1.0, 1.0, 0.0])
     all_agents[0].set_takeoff_height(0.50)
     all_agents[0].set_consensus_connectivity(['cf2', 'cf3', 'cf4'])
     all_agents[0].set_xy_consensus_offset_from_leader((0, 0))

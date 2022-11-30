@@ -112,7 +112,7 @@ class SwarmObject:
 
     def manual_control_law(self, agent: Agent):
         kp = 0.5
-        ks = 0.15
+        ks = 0.20
         if self.manual_x >= 0:
             agent.standby_position[0] = agent.extpos.x - kp * np.sqrt(self.manual_x)
             if agent.standby_position[0] < agent.x_boundaries[0] + ks:
@@ -257,8 +257,8 @@ class SwarmObject:
 
     def pursuit_control_law(self, agent: Agent):
         if agent.name == self.target:
-            kp = 0.50   # 0.30
-            ks = 0.15
+            kp = 0.30
+            ks = 0.20
             if self.manual_x >= 0:
                 agent.standby_position[0] = agent.extpos.x - kp * np.sqrt(self.manual_x)
                 if agent.standby_position[0] < agent.x_boundaries[0] + ks:
@@ -305,7 +305,7 @@ class SwarmObject:
                     roll = - max_roll
 
                 # -- Pitch control law -- #
-                vx = 0.75       # (m/s)
+                vx = 1       # (m/s)
                 kp = 1
                 measured_vx = (agent.velocity[0] * np.cos(agent.yaw * np.pi / 180)
                                + agent.velocity[1] * np.sin(agent.yaw * np.pi / 180))   # (m/s)
@@ -317,10 +317,14 @@ class SwarmObject:
                     pitch = - max_pitch
 
                 # -- Yaw rate control law -- #
-                a = 8
+                closing_speed_x = target[0].velocity[0] - agent.velocity[0]
+                closing_speed_y = target[0].velocity[1] - agent.velocity[1]
+                closing_speed = np.sqrt(closing_speed_x ** 2 + closing_speed_y ** 2)
+
+                a = 27
                 eta = np.arctan2(target[0].extpos.y - agent.extpos.y,
                                  target[0].extpos.x - agent.extpos.x)               # (rad)
-                yaw = (agent.yaw * np.pi / 180) + (a * (eta - self.pursuit_eta))    # (rad)
+                yaw = (agent.yaw * np.pi / 180) + (a * closing_speed * (eta - self.pursuit_eta))    # (rad)
                 self.pursuit_eta = eta                                              # (rad)
                 yaw_rate = yaw_rate_control_law(agent, yaw * 180 / np.pi)           # (°/s)
 
@@ -330,14 +334,14 @@ class SwarmObject:
 
                 # -- Volume borders security check -- #
                 #       Interrupts the chase to keep the UAV within the flight volume boundaries
-                ks = 0.25
+                ks = 0.30
                 if (agent.extpos.x < agent.x_boundaries[0] + ks
                         or agent.extpos.x > agent.x_boundaries[1] - ks
                         or agent.extpos.y < agent.y_boundaries[0] + ks
                         or agent.extpos.y > agent.y_boundaries[1] - ks):
                     x = 6.5 * agent.extpos.x / 8        # (m)
                     y = 6.5 * agent.extpos.y / 8        # (m)
-                    yaw = (180 / np.pi) * np.arctan2(agent.extpos.y, agent.extpos.x)    # (°)
+                    yaw = (180 / np.pi) * (np.pi + np.arctan2(agent.extpos.y, agent.extpos.x))    # (°)
                     agent.cf.commander.send_position_setpoint(x, y, z, yaw)
                     agent.csv_logger.writerow([agent.name, agent.timestamp,
                                                agent.extpos.x, agent.extpos.y, agent.extpos.z, agent.yaw,
