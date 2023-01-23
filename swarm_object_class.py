@@ -1,4 +1,4 @@
-import numpy as np
+import numpy
 
 from agent_class import Agent
 from typing import List, Union
@@ -114,19 +114,19 @@ class SwarmObject:
         kp = 0.5
         ks = 0.20
         if self.manual_x >= 0:
-            agent.standby_position[0] = agent.extpos.x - kp * np.sqrt(self.manual_x)
+            agent.standby_position[0] = agent.extpos.x - kp * numpy.sqrt(self.manual_x)
             if agent.standby_position[0] < agent.x_boundaries[0] + ks:
                 agent.standby_position[0] = agent.x_boundaries[0] + ks
         else:
-            agent.standby_position[0] = agent.extpos.x + kp * np.sqrt(-self.manual_x)
+            agent.standby_position[0] = agent.extpos.x + kp * numpy.sqrt(-self.manual_x)
             if agent.standby_position[0] > agent.x_boundaries[1] - ks:
                 agent.standby_position[0] = agent.x_boundaries[1] - ks
         if self.manual_y >= 0:
-            agent.standby_position[1] = agent.extpos.y - kp * np.sqrt(self.manual_y)
+            agent.standby_position[1] = agent.extpos.y - kp * numpy.sqrt(self.manual_y)
             if agent.standby_position[1] < agent.y_boundaries[0] + ks:
                 agent.standby_position[1] = agent.y_boundaries[0] + ks
         else:
-            agent.standby_position[1] = agent.extpos.y + kp * np.sqrt(-self.manual_y)
+            agent.standby_position[1] = agent.extpos.y + kp * numpy.sqrt(-self.manual_y)
             if agent.standby_position[1] > agent.y_boundaries[1] - ks:
                 agent.standby_position[1] = agent.y_boundaries[1] - ks
         agent.standby_position[2] = self.manual_z * (0.90 * agent.z_boundaries[1])
@@ -205,8 +205,8 @@ class SwarmObject:
     def standby_control_law(self, agent: Agent):
         agents_to_avoid = [agt for agt in self.swarm_agent_list if agt.name in agent.xy_auto_avoid_agents_list]
         objective = [agent.standby_position[0], agent.standby_position[1]]
-        omega = np.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
-                                                 [agent.x_boundaries[1], agent.y_boundaries[1]]))
+        omega = numpy.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
+                                                    [agent.x_boundaries[1], agent.y_boundaries[1]]))
         vx, vy = get_auto_avoid_velocity_command(agent, agent.x_boundaries, agent.y_boundaries, agents_to_avoid,
                                                  objective, omega, self.xy_auto_avoid_d0)
         vz = agent.standby_position[2] - agent.extpos.z
@@ -226,8 +226,8 @@ class SwarmObject:
             agents_to_avoid = [agt for agt in self.swarm_agent_list if agt.name in agent.xy_auto_avoid_agents_list]
             leader_agent = [agt for agt in self.swarm_agent_list if agt.name == self.swarm_leader]
             objective = [leader_agent[0].extpos.x, leader_agent[0].extpos.y]
-            omega = np.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
-                                                     [agent.x_boundaries[1], agent.y_boundaries[1]]))
+            omega = numpy.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
+                                                        [agent.x_boundaries[1], agent.y_boundaries[1]]))
             vx, vy = get_auto_avoid_velocity_command(agent, agent.x_boundaries, agent.y_boundaries, agents_to_avoid,
                                                      objective, omega, self.xy_auto_avoid_d0)
             vz = agent.wingman_z - agent.extpos.z
@@ -242,8 +242,8 @@ class SwarmObject:
     def back_to_initial_position_ctl_law(self, agent):
         agents_to_avoid = [agt for agt in self.swarm_agent_list if agt.name in agent.xy_auto_avoid_agents_list]
         objective = [agent.initial_position[0], agent.initial_position[1]]
-        omega = np.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
-                                                 [agent.x_boundaries[1], agent.y_boundaries[1]]))
+        omega = numpy.pi / (2 * horizontal_distance([agent.x_boundaries[0], agent.y_boundaries[0]],
+                                                    [agent.x_boundaries[1], agent.y_boundaries[1]]))
         vx, vy = get_auto_avoid_velocity_command(agent, agent.x_boundaries, agent.y_boundaries, agents_to_avoid,
                                                  objective, omega, self.xy_auto_avoid_d0)
         vz = agent.takeoff_height - agent.extpos.z
@@ -260,19 +260,19 @@ class SwarmObject:
             kp = 0.30
             ks = 0.20
             if self.manual_x >= 0:
-                agent.standby_position[0] = agent.extpos.x - kp * np.sqrt(self.manual_x)
+                agent.standby_position[0] = agent.extpos.x - kp * numpy.sqrt(self.manual_x)
                 if agent.standby_position[0] < agent.x_boundaries[0] + ks:
                     agent.standby_position[0] = agent.x_boundaries[0] + ks
             else:
-                agent.standby_position[0] = agent.extpos.x + kp * np.sqrt(-self.manual_x)
+                agent.standby_position[0] = agent.extpos.x + kp * numpy.sqrt(-self.manual_x)
                 if agent.standby_position[0] > agent.x_boundaries[1] - ks:
                     agent.standby_position[0] = agent.x_boundaries[1] - ks
             if self.manual_y >= 0:
-                agent.standby_position[1] = agent.extpos.y - kp * np.sqrt(self.manual_y)
+                agent.standby_position[1] = agent.extpos.y - kp * numpy.sqrt(self.manual_y)
                 if agent.standby_position[1] < agent.y_boundaries[0] + ks:
                     agent.standby_position[1] = agent.y_boundaries[0] + ks
             else:
-                agent.standby_position[1] = agent.extpos.y + kp * np.sqrt(-self.manual_y)
+                agent.standby_position[1] = agent.extpos.y + kp * numpy.sqrt(-self.manual_y)
                 if agent.standby_position[1] > agent.y_boundaries[1] - ks:
                     agent.standby_position[1] = agent.y_boundaries[1] - ks
             agent.standby_position[2] = 0.25
@@ -295,9 +295,9 @@ class SwarmObject:
                 # -- Roll control law -- #
                 vy = 0          # (m/s)
                 kp = 1
-                measured_vy = (- agent.velocity[0] * np.sin(agent.yaw * np.pi / 180)
-                               + agent.velocity[1] * np.cos(agent.yaw * np.pi / 180))   # (m/s)
-                roll = - round(kp * (vy - measured_vy) * 180 / np.pi)                   # (°)
+                measured_vy = (- agent.velocity[0] * numpy.sin(agent.yaw * numpy.pi / 180)
+                               + agent.velocity[1] * numpy.cos(agent.yaw * numpy.pi / 180))   # (m/s)
+                roll = - round(kp * (vy - measured_vy) * 180 / numpy.pi)                   # (°)
                 max_roll = 30  # (°)
                 if roll > max_roll:
                     roll = max_roll
@@ -307,9 +307,9 @@ class SwarmObject:
                 # -- Pitch control law -- #
                 vx = 1       # (m/s)
                 kp = 1
-                measured_vx = (agent.velocity[0] * np.cos(agent.yaw * np.pi / 180)
-                               + agent.velocity[1] * np.sin(agent.yaw * np.pi / 180))   # (m/s)
-                pitch = round(kp * (vx - measured_vx) * 180 / np.pi)                    # (°)
+                measured_vx = (agent.velocity[0] * numpy.cos(agent.yaw * numpy.pi / 180)
+                               + agent.velocity[1] * numpy.sin(agent.yaw * numpy.pi / 180))   # (m/s)
+                pitch = round(kp * (vx - measured_vx) * 180 / numpy.pi)                    # (°)
                 max_pitch = 30  # (°)
                 if pitch > max_pitch:
                     pitch = max_pitch
@@ -319,14 +319,14 @@ class SwarmObject:
                 # -- Yaw rate control law -- #
                 closing_speed_x = target[0].velocity[0] - agent.velocity[0]
                 closing_speed_y = target[0].velocity[1] - agent.velocity[1]
-                closing_speed = np.sqrt(closing_speed_x ** 2 + closing_speed_y ** 2)
+                closing_speed = numpy.sqrt(closing_speed_x ** 2 + closing_speed_y ** 2)
 
                 a = 27
-                eta = np.arctan2(target[0].extpos.y - agent.extpos.y,
-                                 target[0].extpos.x - agent.extpos.x)               # (rad)
-                yaw = (agent.yaw * np.pi / 180) + (a * closing_speed * (eta - self.pursuit_eta))    # (rad)
+                eta = numpy.arctan2(target[0].extpos.y - agent.extpos.y,
+                                    target[0].extpos.x - agent.extpos.x)               # (rad)
+                yaw = (agent.yaw * numpy.pi / 180) + (a * closing_speed * (eta - self.pursuit_eta))    # (rad)
                 self.pursuit_eta = eta                                              # (rad)
-                yaw_rate = yaw_rate_control_law(agent, yaw * 180 / np.pi)           # (°/s)
+                yaw_rate = yaw_rate_control_law(agent, yaw * 180 / numpy.pi)           # (°/s)
 
                 # -- Thrust control law -- #
                 z = 0.5         # (m)
@@ -341,7 +341,7 @@ class SwarmObject:
                         or agent.extpos.y > agent.y_boundaries[1] - ks):
                     x = 6.5 * agent.extpos.x / 8        # (m)
                     y = 6.5 * agent.extpos.y / 8        # (m)
-                    yaw = (180 / np.pi) * (np.pi + np.arctan2(agent.extpos.y, agent.extpos.x))    # (°)
+                    yaw = (180 / numpy.pi) * (numpy.pi + numpy.arctan2(agent.extpos.y, agent.extpos.x))    # (°)
                     agent.cf.commander.send_position_setpoint(x, y, z, yaw)
                     agent.csv_logger.writerow([agent.name, agent.timestamp,
                                                agent.extpos.x, agent.extpos.y, agent.extpos.z, agent.yaw,
@@ -368,7 +368,7 @@ def get_auto_avoid_velocity_command(agent: Agent, x_limits: [float] * 2, y_limit
     kpo = 2.5
     kvo = 1
     for agt in agents_to_avoid:
-        v = np.sqrt(agt.velocity[0] ** 2 + agt.velocity[1] ** 2)
+        v = numpy.sqrt(agt.velocity[0] ** 2 + agt.velocity[1] ** 2)
         if v > 0.25:
             kv2 = (kvo * v) ** 2
             xb = agt.extpos.x + kvo * agt.velocity[0]
@@ -384,40 +384,40 @@ def get_auto_avoid_velocity_command(agent: Agent, x_limits: [float] * 2, y_limit
                 d = horizontal_distance([agent.extpos.x, agent.extpos.y], [xc, yc])
                 if d <= d0:
                     vx = vx - (((xc - agent.extpos.x) / (d + 0.001))
-                               * kpo * (np.exp(-d) - np.exp(-d0)))
+                               * kpo * (numpy.exp(-d) - numpy.exp(-d0)))
                     vy = vy - (((yc - agent.extpos.y) / (d + 0.001))
-                               * kpo * (np.exp(-d) - np.exp(-d0)))
+                               * kpo * (numpy.exp(-d) - numpy.exp(-d0)))
             else:
                 da = horizontal_distance([agent.extpos.x, agent.extpos.y], [agt.extpos.x, agt.extpos.y])
                 db = horizontal_distance([agent.extpos.x, agent.extpos.y], [xb, yb])
                 if da < db and da <= d0:
                     vx = vx - (((agt.extpos.x - agent.extpos.x) / (da + 0.001))
-                               * kpo * (np.exp(-da) - np.exp(-d0)))
+                               * kpo * (numpy.exp(-da) - numpy.exp(-d0)))
                     vy = vy - (((agt.extpos.y - agent.extpos.y) / (da + 0.001))
-                               * kpo * (np.exp(-da) - np.exp(-d0)))
+                               * kpo * (numpy.exp(-da) - numpy.exp(-d0)))
                 elif db < da and db < d0:
                     vx = vx - (((xb - agent.extpos.x) / (db + 0.001))
-                               * kpo * (np.exp(-db) - np.exp(-d0)))
+                               * kpo * (numpy.exp(-db) - numpy.exp(-d0)))
                     vy = vy - (((yb - agent.extpos.y) / (db + 0.001))
-                               * kpo * (np.exp(-db) - np.exp(-d0)))
+                               * kpo * (numpy.exp(-db) - numpy.exp(-d0)))
         else:
             d = horizontal_distance([agent.extpos.x, agent.extpos.y], [agt.extpos.x, agt.extpos.y])
             if d <= d0:
                 vx = vx - (((agt.extpos.x - agent.extpos.x) / (d + 0.001))
-                           * kpo * (np.exp(-d) - np.exp(-d0)))
+                           * kpo * (numpy.exp(-d) - numpy.exp(-d0)))
                 vy = vy - (((agt.extpos.y - agent.extpos.y) / (d + 0.001))
-                           * kpo * (np.exp(-d) - np.exp(-d0)))
+                           * kpo * (numpy.exp(-d) - numpy.exp(-d0)))
 
     # Objective
     kpg = 1
     distance_to_objective = horizontal_distance([agent.extpos.x, agent.extpos.y],
                                                 [objective[0],
                                                  objective[1]])
-    d1 = np.pi / (2 * omega)
+    d1 = numpy.pi / (2 * omega)
     vx = vx + ((objective[0] - agent.extpos.x) * kpg
-               / (2 * d1 * np.sqrt((distance_to_objective + 0.001) / d1)))
+               / (2 * d1 * numpy.sqrt((distance_to_objective + 0.001) / d1)))
     vy = vy + ((objective[1] - agent.extpos.y) * kpg
-               / (2 * d1 * np.sqrt((distance_to_objective + 0.001) / d1)))
+               / (2 * d1 * numpy.sqrt((distance_to_objective + 0.001) / d1)))
 
     # Borders
     x_min = x_limits[0] + 0.2 * (x_limits[1] - x_limits[0])
@@ -437,7 +437,7 @@ def get_auto_avoid_velocity_command(agent: Agent, x_limits: [float] * 2, y_limit
 
 
 def get_xy_consensus_attitude(agent: Agent, agents_list: List[Agent]):
-    measured_yaw = agent.yaw * np.pi / 180  # Convert from degrees to radians
+    measured_yaw = agent.yaw * numpy.pi / 180  # Convert from degrees to radians
 
     dx = agent.xy_consensus_offset_from_leader[0]
     dy = agent.xy_consensus_offset_from_leader[1]
@@ -451,8 +451,8 @@ def get_xy_consensus_attitude(agent: Agent, agents_list: List[Agent]):
                        + eta * kp * (agent.velocity[0] - agt.velocity[0]) for agt in connected_agents])
     y_dot_dot = sum([kp * (agent.extpos.y - agt.extpos.y + (agt.xy_consensus_offset_from_leader[1] - dy))
                      + eta * kp * (agent.velocity[1] - agt.velocity[1]) for agt in connected_agents])
-    pitch = (x_dot_dot * np.cos(measured_yaw) + y_dot_dot * np.sin(measured_yaw)) * 180 / np.pi
-    roll = (- x_dot_dot * np.sin(measured_yaw) + y_dot_dot * np.cos(measured_yaw)) * 180 / np.pi
+    pitch = (x_dot_dot * numpy.cos(measured_yaw) + y_dot_dot * numpy.sin(measured_yaw)) * 180 / numpy.pi
+    roll = (- x_dot_dot * numpy.sin(measured_yaw) + y_dot_dot * numpy.cos(measured_yaw)) * 180 / numpy.pi
 
     max_roll = 20  # (°)
     max_pitch = 20  # (°)
@@ -502,19 +502,19 @@ def yaw_rate_control_law(agent: Agent, targeted_yaw: float) -> float:
     """
 
     yaw_kp = 5
-    targeted_yaw = targeted_yaw * np.pi / 180  # (° -> rad)
-    targeted_yaw = targeted_yaw % (2 * np.pi)
-    if targeted_yaw > np.pi:
-        targeted_yaw = targeted_yaw - (2 * np.pi)
+    targeted_yaw = targeted_yaw * numpy.pi / 180  # (° -> rad)
+    targeted_yaw = targeted_yaw % (2 * numpy.pi)
+    if targeted_yaw > numpy.pi:
+        targeted_yaw = targeted_yaw - (2 * numpy.pi)
 
-    measured_yaw = agent.yaw * np.pi / 180
-    measured_yaw = measured_yaw % (2 * np.pi)
-    if measured_yaw > np.pi:
-        measured_yaw = measured_yaw - (2 * np.pi)
+    measured_yaw = agent.yaw * numpy.pi / 180
+    measured_yaw = measured_yaw % (2 * numpy.pi)
+    if measured_yaw > numpy.pi:
+        measured_yaw = measured_yaw - (2 * numpy.pi)
 
     yaw_error_0 = targeted_yaw - measured_yaw
-    yaw_error_1 = targeted_yaw - measured_yaw + 2 * np.pi
-    yaw_error_2 = targeted_yaw - measured_yaw - 2 * np.pi
+    yaw_error_1 = targeted_yaw - measured_yaw + 2 * numpy.pi
+    yaw_error_2 = targeted_yaw - measured_yaw - 2 * numpy.pi
 
     if abs(yaw_error_1) < abs(yaw_error_0) and abs(yaw_error_1) < abs(yaw_error_2):
         yaw_error = yaw_error_1
@@ -523,7 +523,7 @@ def yaw_rate_control_law(agent: Agent, targeted_yaw: float) -> float:
     else:
         yaw_error = yaw_error_0
 
-    yaw_rate = - round(yaw_kp * yaw_error * 180 / np.pi)  # (°/s)
+    yaw_rate = - round(yaw_kp * yaw_error * 180 / numpy.pi)  # (°/s)
 
     max_yaw_rate = 180  # (°/s)
     if yaw_rate > max_yaw_rate:
@@ -534,18 +534,18 @@ def yaw_rate_control_law(agent: Agent, targeted_yaw: float) -> float:
 
 
 def distance(position_1_xyz_list: List[float], position_2_xyz_list: List[float]):
-    d = np.sqrt((position_1_xyz_list[0] - position_2_xyz_list[0]) ** 2
-                + (position_1_xyz_list[1] - position_2_xyz_list[1]) ** 2
-                + (position_1_xyz_list[2] - position_2_xyz_list[2]) ** 2)
+    d = numpy.sqrt((position_1_xyz_list[0] - position_2_xyz_list[0]) ** 2
+                   + (position_1_xyz_list[1] - position_2_xyz_list[1]) ** 2
+                   + (position_1_xyz_list[2] - position_2_xyz_list[2]) ** 2)
     return d
 
 
 def vertical_distance(position_1_z: float, position_2_z: float):
-    vd = np.sqrt((position_1_z - position_2_z) ** 2)
+    vd = numpy.sqrt((position_1_z - position_2_z) ** 2)
     return vd
 
 
 def horizontal_distance(position_1_xy: List[float], position_2_xy: List[float]):
-    hd = np.sqrt((position_1_xy[0] - position_2_xy[0]) ** 2
-                 + (position_1_xy[1] - position_2_xy[1]) ** 2)
+    hd = numpy.sqrt((position_1_xy[0] - position_2_xy[0]) ** 2
+                    + (position_1_xy[1] - position_2_xy[1]) ** 2)
     return hd

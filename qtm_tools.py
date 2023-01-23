@@ -1,6 +1,6 @@
 import asyncio
+import numpy
 import qtm
-import numpy as np
 
 from agent_class import Agent
 from qtm import QRTConnection
@@ -61,9 +61,9 @@ def uav_tracking(agents: List[Agent], markers: List[RT3DMarkerPositionNoLabel], 
 
 
 def distance_init_pos_to_marker(position_1: [float] * 3, position_2: [float] * 3):
-    d = np.sqrt((position_1[0] - position_2[0]) ** 2
-                + (position_1[1] - position_2[1]) ** 2
-                + (position_1[2] - position_2[2]) ** 2)
+    d = numpy.sqrt((position_1[0] - position_2[0]) ** 2
+                   + (position_1[1] - position_2[1]) ** 2
+                   + (position_1[2] - position_2[2]) ** 2)
     return d
 
 
@@ -72,9 +72,9 @@ def distance_between_markers(marker_1: RT3DMarkerPositionNoLabel, marker_2: RT3D
     Method that returns the distance (m) between marker_1 position (m) and
     marker_2 position (mm)
     """
-    d = np.sqrt((marker_1.x - marker_2.x * 10 ** -3) ** 2
-                + (marker_1.y - marker_2.y * 10 ** -3) ** 2
-                + (marker_1.z - marker_2.z * 10 ** -3) ** 2)
+    d = numpy.sqrt((marker_1.x - marker_2.x * 10 ** -3) ** 2
+                   + (marker_1.y - marker_2.y * 10 ** -3) ** 2
+                   + (marker_1.z - marker_2.z * 10 ** -3) ** 2)
     return d
 
 

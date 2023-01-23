@@ -1,7 +1,7 @@
 import _csv
+import numpy
 import time
 
-import numpy as np
 # noinspection PyProtectedMember
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie import Crazyflie
@@ -107,6 +107,8 @@ class Agent:
         self.cf.disconnected.add_callback(self.cf_disconnected_callback)
 
     def cf_connected_callback(self, _):
+        # TODO
+        # Enable compatibility for Python 3.10
         self.enabled = True
         self.setup_parameters()
         self.cf.commander.send_setpoint(0, 0, 0, 0)
@@ -136,7 +138,7 @@ class Agent:
         logconf.stop()
         voltage_points = [3.0, 3.6, 3.65, 3.75, 3.85, 4.0, 4.2]
         battery_level_points = [0, 5, 10, 25, 50, 75, 100]
-        self.initial_battery_level = np.interp(self.initial_battery_voltage, voltage_points, battery_level_points)
+        self.initial_battery_level = numpy.interp(self.initial_battery_voltage, voltage_points, battery_level_points)
         if self.initial_battery_level <= 20:
             print('---- Warning ----', self.name, ': Low battery level (', round(self.initial_battery_level),
                   '% ), flight disabled')

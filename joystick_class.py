@@ -4,9 +4,8 @@ import os
 import struct
 
 from fcntl import ioctl
-from swarm_object_class import SwarmObject
 from network_communication_class import NetworkCommunication
-
+from swarm_object_class import SwarmObject
 from threading import Thread
 from typing import Union
 
