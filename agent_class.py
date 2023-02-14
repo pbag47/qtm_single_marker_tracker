@@ -1,6 +1,5 @@
 import _csv
 import numpy
-import time
 
 # noinspection PyProtectedMember
 from cflib.crazyflie.log import LogConfig
@@ -67,7 +66,7 @@ class Agent:
         self.standby_yaw: float = 0.0               # (°)
 
         self.consensus_connectivity: List[str] = []
-        self.xy_consensus_offset_from_leader: (float, float) = (0, 0)   # (dx (m), dy (m))
+        self.xy_consensus_offset: (float, float) = (0, 0)   # (dx (m), dy (m))
         self.z_consensus_xy_position: List[float] = []                  # [x (m), y (m)]
         self.z_consensus_vz: float = 0.0                                # (m/s)
 
@@ -107,12 +106,9 @@ class Agent:
         self.cf.disconnected.add_callback(self.cf_disconnected_callback)
 
     def cf_connected_callback(self, _):
-        # TODO
-        # Enable compatibility for Python 3.10
+        print(self.name, 'connected')
         self.enabled = True
-        self.setup_parameters()
         self.cf.commander.send_setpoint(0, 0, 0, 0)
-        self.start_attitude_logs()
 
     def cf_connection_failed_callback(self, _, __):
         self.battery_test_passed = True
@@ -121,7 +117,7 @@ class Agent:
         print(self.name, 'connection attempt failed')
 
     def setup_parameters(self):
-        time.sleep(1.5)
+        print(self.name, 'setup_parameters')
         log_config = LogConfig(name=self.name + ' battery voltage', period_in_ms=50)
         log_config.add_variable('pm.vbat', 'float')  # Retrieves the battery level
         self.cf.log.add_config(log_config)
@@ -224,8 +220,8 @@ class Agent:
     def set_consensus_connectivity(self, connections: List[str]):
         self.consensus_connectivity = connections
 
-    def set_xy_consensus_offset_from_leader(self, offset: (float, float)):
-        self.xy_consensus_offset_from_leader = offset
+    def set_xy_consensus_offset(self, offset: (float, float)):
+        self.xy_consensus_offset = offset
 
     def set_agents_to_avoid(self, agents_names: List[str]):
         self.xy_auto_avoid_agents_list = agents_names

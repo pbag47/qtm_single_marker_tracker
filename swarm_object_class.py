@@ -112,23 +112,27 @@ class SwarmObject:
 
     def manual_control_law(self, agent: Agent):
         kp = 0.5
-        ks = 0.20
+        ks = 0.10
+
         if self.manual_x >= 0:
             agent.standby_position[0] = agent.extpos.x - kp * numpy.sqrt(self.manual_x)
-            if agent.standby_position[0] < agent.x_boundaries[0] + ks:
-                agent.standby_position[0] = agent.x_boundaries[0] + ks
         else:
             agent.standby_position[0] = agent.extpos.x + kp * numpy.sqrt(-self.manual_x)
-            if agent.standby_position[0] > agent.x_boundaries[1] - ks:
-                agent.standby_position[0] = agent.x_boundaries[1] - ks
+
         if self.manual_y >= 0:
             agent.standby_position[1] = agent.extpos.y - kp * numpy.sqrt(self.manual_y)
-            if agent.standby_position[1] < agent.y_boundaries[0] + ks:
-                agent.standby_position[1] = agent.y_boundaries[0] + ks
         else:
             agent.standby_position[1] = agent.extpos.y + kp * numpy.sqrt(-self.manual_y)
-            if agent.standby_position[1] > agent.y_boundaries[1] - ks:
-                agent.standby_position[1] = agent.y_boundaries[1] - ks
+
+        if agent.standby_position[0] < agent.x_boundaries[0] + ks:
+            agent.standby_position[0] = agent.x_boundaries[0] + ks
+        if agent.standby_position[0] > agent.x_boundaries[1] - ks:
+            agent.standby_position[0] = agent.x_boundaries[1] - ks
+        if agent.standby_position[1] < agent.y_boundaries[0] + ks:
+            agent.standby_position[1] = agent.y_boundaries[0] + ks
+        if agent.standby_position[1] > agent.y_boundaries[1] - ks:
+            agent.standby_position[1] = agent.y_boundaries[1] - ks
+
         agent.standby_position[2] = self.manual_z * (0.90 * agent.z_boundaries[1])
         if agent.standby_position[2] > agent.z_boundaries[1] - ks:
             agent.standby_position[2] = agent.z_boundaries[1] - ks
@@ -173,6 +177,9 @@ class SwarmObject:
 
     def xy_consensus_control_law(self, agent: Agent):
         if not self.swarm_leader:
+            print('-- Warning -- ', agent.name, ': no leader set for xy consensus')
+            agent.standby()
+        else:
             in_flight_agents = [agt for agt in self.swarm_agent_list if agt.state != 'Not flying']
             roll, pitch = get_xy_consensus_attitude(agent, in_flight_agents)
             thrust = thrust_control_law(agent, agent.takeoff_height)
@@ -183,9 +190,6 @@ class SwarmObject:
                                        'None', 'None', 'None',
                                        roll, pitch, yaw_rate, thrust])
             agent.cf.commander.send_setpoint(roll, pitch, yaw_rate, thrust)
-        else:
-            print('-- Warning -- ', agent.name, ': no leader set for xy consensus')
-            agent.standby()
 
     def z_consensus_control_law(self, agent: Agent):
         in_flight_agents = [agt
@@ -437,22 +441,47 @@ def get_auto_avoid_velocity_command(agent: Agent, x_limits: [float] * 2, y_limit
 
 
 def get_xy_consensus_attitude(agent: Agent, agents_list: List[Agent]):
-    measured_yaw = agent.yaw * numpy.pi / 180  # Convert from degrees to radians
+    yaw = agent.yaw * numpy.pi / 180  # Convert from degrees to radians
 
-    dx = agent.xy_consensus_offset_from_leader[0]
-    dy = agent.xy_consensus_offset_from_leader[1]
+    r = agent.xy_consensus_offset[0]  # (m)
+    rho = agent.xy_consensus_offset[1]  # (m)
 
     connected_agents = [agt for agt in agents_list
                         if agt.name in agent.consensus_connectivity and agt != agent]
 
-    kp = 0.25
-    eta = 1
-    x_dot_dot = - sum([kp * (agent.extpos.x - agt.extpos.x + (agt.xy_consensus_offset_from_leader[0] - dx))
-                       + eta * kp * (agent.velocity[0] - agt.velocity[0]) for agt in connected_agents])
-    y_dot_dot = sum([kp * (agent.extpos.y - agt.extpos.y + (agt.xy_consensus_offset_from_leader[1] - dy))
-                     + eta * kp * (agent.velocity[1] - agt.velocity[1]) for agt in connected_agents])
-    pitch = (x_dot_dot * numpy.cos(measured_yaw) + y_dot_dot * numpy.sin(measured_yaw)) * 180 / numpy.pi
-    roll = (- x_dot_dot * numpy.sin(measured_yaw) + y_dot_dot * numpy.cos(measured_yaw)) * 180 / numpy.pi
+    kp = 1
+    xi = 1
+    kd = 0.2
+
+    xn_errors_list = []
+    yn_errors_list = []
+    vxn_errors_list = []
+    vyn_errors_list = []
+    for agt in connected_agents:
+        x_error = agt.extpos.x - agent.extpos.x
+        y_error = agt.extpos.y - agent.extpos.y
+
+        xn_error = x_error * numpy.cos(yaw) + y_error * numpy.sin(yaw)
+        yn_error = - x_error * numpy.sin(yaw) + y_error * numpy.cos(yaw)
+        xn_errors_list.append(xn_error)
+        yn_errors_list.append(yn_error)
+
+        vx_error = agent.velocity[0] - agt.velocity[0]
+        vy_error = agent.velocity[1] - agt.velocity[1]
+
+        vxn_error = vx_error * numpy.cos(yaw) + vy_error * numpy.sin(yaw)
+        vyn_error = - vx_error * numpy.sin(yaw) + vy_error * numpy.cos(yaw)
+        vxn_errors_list.append(vxn_error)
+        vyn_errors_list.append(vyn_error)
+
+    axn = kd * (kp * (sum(xn_errors_list) + r) - xi * sum(vxn_errors_list))
+    ayn = kd * (kp * (sum(yn_errors_list) + rho) - xi * sum(vyn_errors_list))
+
+    roll = - ayn  # (rad)
+    pitch = axn  # (rad)
+
+    pitch = pitch * 180 / numpy.pi  # Convert from radians to degrees
+    roll = roll * 180 / numpy.pi  # Convert from radians to degrees
 
     max_roll = 20  # (°)
     max_pitch = 20  # (°)
@@ -501,7 +530,7 @@ def yaw_rate_control_law(agent: Agent, targeted_yaw: float) -> float:
     Returns a yaw_rate command (°/s) for a UAV to match its targeted yaw (°)
     """
 
-    yaw_kp = 5
+    yaw_kp = 3
     targeted_yaw = targeted_yaw * numpy.pi / 180  # (° -> rad)
     targeted_yaw = targeted_yaw % (2 * numpy.pi)
     if targeted_yaw > numpy.pi:

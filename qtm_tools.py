@@ -17,8 +17,8 @@ async def connect_to_qtm(ip: str):
     return connection
 
 
-def frame_acquisition(connection: QRTConnection):
-    frame: qtm.QRTPacket = asyncio.get_event_loop().run_until_complete(
+def frame_acquisition(connection: QRTConnection, loop):
+    frame: qtm.QRTPacket = loop.run_until_complete(
         connection.get_current_frame(components=['3dnolabels']))
     timestamp = frame.timestamp * 10 ** -6
     headers, markers = frame.get_3d_markers_no_label()
