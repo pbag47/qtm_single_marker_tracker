@@ -1,5 +1,6 @@
 import array
 import joystick_map
+import logging
 import os
 import struct
 
@@ -8,6 +9,10 @@ from network_communication_class import NetworkCommunication
 from swarm_object_class import SwarmObject
 from threading import Thread
 from typing import Union
+
+
+print(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Joystick:
@@ -23,9 +28,8 @@ class Joystick:
             self.packet_rec_thread = Thread(target=self.await_packet)
             self.packet_rec_thread.start()
         else:
-            print('Joystick initialization:')
-            print('    Available devices:', [('/dev/input/%s' % fn)
-                                             for fn in os.listdir('/dev/input') if fn.startswith('js')])
+            logger.info('Detected input devices : ' + str([('/dev/input/%s' % fn)
+                                                           for fn in os.listdir('/dev/input') if fn.startswith('js')]))
 
             # Buttons and axes states initialization
             self.axis_states = {}
@@ -36,14 +40,19 @@ class Joystick:
 
             # Opens the Joystick device
             self.fn = '/dev/input/js0'
-            print('    Opening %s:' % self.fn)
-            self.js_device = open(self.fn, 'rb')
+            logger.info('Opening %s:' % self.fn)
+            # print('    Opening %s:' % self.fn)
+            try:
+                self.js_device = open(self.fn, 'rb')
+            except FileNotFoundError as e:
+                logger.error('No controller / joystick found')
+                raise e
 
             # Gets the device name
             buf = array.array('B', [0] * 64)
             ioctl(self.js_device, 0x80006a13 + (0x10000 * len(buf)), buf)
             self.js_name = buf.tobytes().rstrip(b'\x00').decode('utf-8')
-            print('        Device name: %s' % self.js_name)
+            logger.info('Device name: %s' % self.js_name)
 
             # Gets the number of axes and buttons
             buf = array.array('B', [0])
@@ -73,8 +82,8 @@ class Joystick:
                 self.button_map.append(btn_name)
                 self.button_states[btn_name] = 0.0
 
-            print('        %d axes found: %s' % (self.num_axes, ', '.join(self.axis_map)))
-            print('        %d buttons found: %s' % (self.num_buttons, ', '.join(self.button_map)))
+            logger.info('%d axes found: %s' % (self.num_axes, ', '.join(self.axis_map)))
+            logger.info('%d buttons found: %s' % (self.num_buttons, ', '.join(self.button_map)))
 
             if self.swarm is not None:
                 self.jsl = Thread(target=self.joystick_inputs)
@@ -117,14 +126,14 @@ class Joystick:
 
     def buttons(self, button, value):
         if button == 'Stop' and value:
-            print('Stop button triggered, joystick disconnected')
+            logger.info('Stop button triggered, joystick disconnected')
             for agt in self.swarm.swarm_agent_list:
                 agt.cf.commander.send_stop_setpoint()
                 agt.stop()
             self.stopped = True
 
         if button == 'Takeoff/Land' and value:
-            print('Takeoff / Land button triggered')
+            logger.info('Takeoff / Land button triggered')
             for agt in self.swarm.swarm_agent_list:
                 if agt.enabled and not agt.is_flying:
                     agt.takeoff()
@@ -132,28 +141,24 @@ class Joystick:
                     agt.land()
 
         if button == 'Standby' and value:
-            print('Standby button triggered')
+            logger.info('Standby button triggered')
             for agt in self.swarm.swarm_agent_list:
                 if agt.enabled and agt.is_flying:
                     agt.standby()
 
         if button == 'Manual_flight' and value:
-            print('Manual flight button triggered')
+            logger.info('Manual flight button triggered')
             if any([agt.state == 'z_consensus'
                     or agt.state == 'Takeoff'
                     or agt.state == 'Land' for agt in self.swarm.swarm_agent_list]):
-                print('Warning : Manual control command access denied')
-                print('          Some UAVs flightmode do not allow them to automatically avoid obstacles.')
-                print('          For security reasons, manual flight is prohibited while any UAV is in')
-                print('          Takeoff, Land or Height consensus flightmode')
-                print('          Please use the Standby, Wingman or Back to initial position flightmode')
-                print('          before switching to manual flight to make sure that automatic')
-                print('          avoidance is enabled')
+                logger.warning('Manual control mode is prohibited while any UAV is in '
+                               'Takeoff, Landing or Height consensus flight mode')
+                logger.error('Manual control command access denied')
             else:
                 for agt in self.swarm.swarm_agent_list:
                     if agt.enabled and agt.is_flying and any([agt.name == manual for manual in
                                                               self.swarm.manual_flight_agents_list]):
-                        self.swarm.manual_z = agt.extpos.z
+                        self.swarm.manual_z = agt.position.z
                         agt.manual_flight()
 
         if button == 'Yaw-' and value:
@@ -163,25 +168,25 @@ class Joystick:
             self.swarm.manual_yaw = self.swarm.manual_yaw - 22.5
 
         if button == 'Initial_position' and value:
-            print('Initial position button triggered')
+            logger.info('Initial position button triggered')
             for agt in self.swarm.swarm_agent_list:
                 if agt.enabled and agt.is_flying:
                     agt.back_to_initial_position()
 
         if button == 'xy_consensus' and value:
-            print('xy consensus button triggered')
+            logger.info('xy consensus button triggered')
             for agt in self.swarm.swarm_agent_list:
                 if agt.enabled and agt.is_flying:
                     agt.xy_consensus()
 
         if button == 'z_consensus' and value:
-            print('Height consensus button triggered')
+            logger.info('Height consensus button triggered')
             for agt in self.swarm.swarm_agent_list:
                 if agt.enabled and agt.is_flying:
                     agt.z_consensus()
 
         if button == 'Wingman' and value:
-            print('Wingman button triggered')
+            logger.info('Wingman button triggered')
             if self.swarm.swarm_leader is not None:
                 for agt in self.swarm.swarm_agent_list:
                     if agt.enabled and agt.is_flying and agt.name == self.swarm.swarm_leader:
@@ -190,13 +195,13 @@ class Joystick:
                         agt.wingman_behaviour()
 
         if button == 'Pursuit' and value:
-            print('Pursuit button triggered')
+            logger.info('Pursuit button triggered')
             if self.swarm.target is not None and self.swarm.chaser is not None:
                 for agt in self.swarm.swarm_agent_list:
                     if agt.enabled and agt.is_flying:
                         agt.pursuit()
             else:
-                print('Warning : No swarm leader assigned, wingman command access denied')
+                logger.error('No swarm leader assigned, wingman command access denied')
 
     def axis(self, axis, value):
         fvalue = value / 32767.0
